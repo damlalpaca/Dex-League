@@ -1,0 +1,2432 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dex League</title>
+<meta name="description" content="Roll a type, draft a Pokémon, build a squad, sim the season. A fan-made draft game for football, basketball, soccer and baseball.">
+<meta property="og:title" content="Dex League">
+<meta property="og:description" content="Roll a type, draft a Pokémon, build a squad, sim the season. Play your friends with a squad code.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0D1B2E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column "playbook" page. Roll panel on top, results next, two-sided lineup (offense / defense) below. */
+:root {
+  --bg: #E9EFF4;
+  --surface: #FFFFFF;
+  --surface-2: #F2F6FA;
+  --ink: #0D1B2E;
+  --muted: #566A80;
+  --line: #CFD9E3;
+  --accent: #F0B400;
+  --accent-ink: #1A1300;
+  --meter: #1F7A4D;
+  --win: #1B8A4B;
+  --loss: #C23A3A;
+  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A121D;
+    --surface: #121D2C;
+    --surface-2: #182638;
+    --ink: #E8EEF5;
+    --muted: #93A5BA;
+    --line: #26384D;
+    --accent: #F5BE1E;
+    --accent-ink: #1A1300;
+    --meter: #3FBF80;
+    --win: #3FBF80;
+    --loss: #EF6B6B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A121D;
+  --surface: #121D2C;
+  --surface-2: #182638;
+  --ink: #E8EEF5;
+  --muted: #93A5BA;
+  --line: #26384D;
+  --accent: #F5BE1E;
+  --accent-ink: #1A1300;
+  --meter: #3FBF80;
+  --win: #3FBF80;
+  --loss: #EF6B6B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 760px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.eyebrow { margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+h1 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 900; font-size: 46px; line-height: 0.95; letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 52ch; }
+
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+.progress { display: flex; align-items: center; gap: 12px; }
+.progress .num { font-family: var(--font-mono); font-weight: 700; font-size: 14px; min-width: 52px; }
+.pbar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.pbar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .3s ease; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+.hint { margin: 0; color: var(--muted); font-size: 14px; }
+
+.btn { border: 0; border-radius: 10px; padding: 14px 18px; font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .4; cursor: not-allowed; filter: none; transform: none; }
+.btn.alt { background: transparent; color: var(--ink); border: 1.5px solid var(--line); font-size: 18px; padding: 11px 16px; }
+.btn.alt:hover { border-color: var(--muted); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 10px; }
+.btnrow > * { flex: 1 1 180px; }
+
+.tp { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.tp i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+.cands { display: grid; gap: 10px; }
+.cand { text-align: left; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; animation: rise .25s ease backwards; }
+.cand:hover { border-color: var(--muted); }
+.cand[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--surface); }
+.cand-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.nm { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em; }
+.types { display: flex; gap: 5px; flex-wrap: wrap; }
+.ab { font-size: 13px; color: var(--muted); }
+.ab b { color: var(--ink); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; }
+.st { display: grid; grid-template-columns: 30px 1fr 28px; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.st em { font-style: normal; color: var(--ink); text-align: right; font-weight: 700; }
+.bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--meter); border-radius: inherit; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+.recs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.recs small { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-right: 2px; }
+.rec { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-family: var(--font-mono); font-size: 12px; }
+.rec b { font-weight: 700; }
+.rec em { font-style: normal; color: var(--muted); }
+.rec span { font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+.rec.top { border-color: var(--meter); }
+.rec.top em { color: var(--ink); font-weight: 700; }
+.gm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gsub { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 11px; color: var(--muted); }
+.tdot { display: inline-flex; align-items: center; gap: 4px; }
+.tdot i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.edge { font-style: normal; font-family: var(--font-mono); font-weight: 700; color: var(--muted); }
+.edge.up { color: var(--win); }
+.edge.dn { color: var(--loss); }
+.wk.dim { opacity: .62; }
+.res.nx { background: var(--accent); color: var(--accent-ink); font-size: 9px; letter-spacing: .02em; padding: 2px 0; }
+.wk.plain { grid-template-columns: 34px 1fr; animation: none; }
+.sched summary { cursor: pointer; font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: .03em; }
+.modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.mode { text-align: left; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mode b { font-family: var(--font-display); font-weight: 800; font-size: 19px; text-transform: uppercase; letter-spacing: .03em; line-height: 1.05; }
+.mode small { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.mode[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--surface); }
+.picker { display: flex; flex-direction: column; gap: 10px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.picker h3 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
+.slotgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.slotbtn { text-align: left; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 10px; display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; min-width: 0; }
+.slotbtn:hover { border-color: var(--accent); }
+.slotbtn.best { border-color: var(--meter); }
+.pos { font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: 0.04em; line-height: 1; }
+.sc { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+.slotbtn .bar { grid-column: 1 / -1; }
+.need { grid-column: 1 / -1; font-size: 11px; color: var(--muted); font-family: var(--font-mono); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip.neg { background: var(--loss); }
+.chip { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; background: var(--meter); color: var(--bg); }
+
+.side { display: flex; flex-direction: column; gap: 10px; }
+.side h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: 0.03em; display: flex; justify-content: space-between; align-items: baseline; }
+.side h2 span { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 8px; }
+.slot { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 76px; }
+.slot.open { background: transparent; border-style: dashed; color: var(--muted); }
+.slot .row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.slot .who { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; line-height: 1.2; }
+.slot .mini { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+.record { font-family: var(--font-display); font-weight: 900; font-size: 88px; line-height: .9; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+.record.perfect { color: var(--accent); }
+.verdict { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 24px; text-transform: uppercase; letter-spacing: 0.04em; }
+.ratings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rt { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.rt small { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.rt b { font-family: var(--font-mono); font-size: 20px; }
+.weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 14px; margin: 0; padding: 0; list-style: none; }
+.wk { display: grid; grid-template-columns: 34px 1fr 38px 58px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; animation: rise .25s ease backwards; }
+.wk .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.wk .ch { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
+.res { font-family: var(--font-mono); font-weight: 700; text-align: center; border-radius: 6px; padding: 1px 0; font-size: 13px; }
+.res.w { color: var(--win); background: color-mix(in srgb, var(--win) 14%, transparent); }
+.res.l { color: var(--loss); background: color-mix(in srgb, var(--loss) 14%, transparent); }
+textarea { width: 100%; min-height: 76px; resize: vertical; font-family: var(--font-mono); font-size: 12px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+footer { color: var(--muted); font-size: 12px; max-width: 62ch; }
+
+
+.legend { margin: 0; font-family: var(--font-mono); font-size: 11px; color: var(--muted); line-height: 1.6; }
+.sub { margin: 4px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
+.awards { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 8px; }
+.award { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.award small { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.award b { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1; text-transform: uppercase; letter-spacing: .02em; overflow-wrap: break-word; }
+.award span { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.recap p { margin: 6px 0 0; max-width: 62ch; }
+
+
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-top: 6px; }
+.setup { display: flex; flex-direction: column; gap: 14px; }
+.setup .hint { margin-top: -4px; }
+.mode small.s2 { font-family: var(--font-body); }
+.strip { display: flex; flex-wrap: wrap; gap: 2px; }
+.strip i { width: 9px; height: 14px; border-radius: 2px; background: var(--line); display: block; }
+.strip i.w { background: var(--win); }
+.strip i.l { background: var(--loss); }
+.strip i.d { background: var(--muted); }
+details.more > summary { cursor: pointer; font-weight: 600; color: var(--muted); font-size: 14px; padding: 4px 0; }
+.res.d { color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); }
+.wk { grid-template-columns: 34px 1fr 38px minmax(58px, auto); }
+.wk.plain { grid-template-columns: 40px 1fr; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-mono); }
+.tbl th { text-align: right; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+.tbl th:nth-child(2), .tbl td:nth-child(2) { text-align: left; }
+.tbl td { padding: 5px 6px; border-top: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+.tbl td:nth-child(2) { font-family: var(--font-body); font-size: 14px; }
+.tbl tr.me td { background: color-mix(in srgb, var(--accent) 22%, transparent); font-weight: 700; }
+.tbl tr.gap td { text-align: center; color: var(--muted); padding: 1px; border-top: 0; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.plan { text-align: left; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.plan:hover { border-color: var(--accent); }
+.plan b { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: .03em; line-height: 1.05; }
+.plan small { font-size: 12px; color: var(--muted); }
+.plan em { font-style: normal; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--muted); }
+.plan em.up { color: var(--win); }
+.plan em.dn { color: var(--loss); }
+.plan.best { border-color: var(--meter); }
+.trophy { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); vertical-align: middle; margin-left: 6px; }
+.ratings { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.record.small { font-size: 56px; }
+.comp h3.sub { display: flex; align-items: center; }
+
+
+.topbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+input[type="text"], input:not([type]) { font: inherit; color: var(--ink); background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; width: 100%; }
+.roomrow { display: flex; gap: 8px; align-items: stretch; margin-top: 6px; }
+.roomrow input { flex: 1; text-transform: uppercase; letter-spacing: .08em; font-family: var(--font-mono); }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.fld input { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; color: var(--ink); }
+.share { display: flex; flex-direction: column; gap: 10px; border-top: 1px dashed var(--line); padding-top: 14px; }
+#sqCode, #codes { font-family: var(--font-mono); font-size: 12px; min-height: 64px; }
+#codes { min-height: 110px; }
+.sqs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sq { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
+.sqhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sqhead b { font-family: var(--font-display); font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: .02em; display: block; line-height: 1.05; }
+.sqhead small { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+.lu { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 14px; }
+.lu li { display: grid; grid-template-columns: 38px 1fr auto; gap: 6px; font-size: 13px; align-items: baseline; }
+.lu .pos { font-size: 14px; }
+.lu em { font-style: normal; font-family: var(--font-mono); color: var(--muted); font-size: 12px; }
+.cnt { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-weight: 500; }
+.vsview #schedule, .vsview #rollPanel, .vsview #resultPanel, .vsview #lineup, .vsview .progress, .vsview .lede { display: none; }
+
+@media (max-width: 420px) {
+  h1 { font-size: 40px; }
+  .record { font-size: 76px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cand, .wk { animation: none; }
+  .pbar i { transition: none; }
+}
+
+/* Portraits and boards */
+.board { position: relative; width: 100%; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), inset 0 -24px 40px rgba(0,0,0,.18); background-size: 100% 100%; }
+.board::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-size: 100% 100%, 180px 180px; background-blend-mode: normal, overlay; }
+.b-soccer { background: repeating-linear-gradient(180deg, #2E7D4B 0 8.33%, #38905A 8.33% 16.66%); }
+.b-soccer::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 118' preserveAspectRatio='none'%3E%3Cg stroke='%23fff' stroke-opacity='.62' fill='none' stroke-width='.45'%3E%3Crect x='3' y='3' width='94' height='112'/%3E%3Cline x1='3' y1='59' x2='97' y2='59'/%3E%3Ccircle cx='50' cy='59' r='9'/%3E%3Crect x='24' y='3' width='52' height='16'/%3E%3Crect x='38' y='3' width='24' height='6'/%3E%3Crect x='24' y='99' width='52' height='16'/%3E%3Crect x='38' y='109' width='24' height='6'/%3E%3Cpath d='M41 19 A9 9 0 0 0 59 19'/%3E%3Cpath d='M41 99 A9 9 0 0 1 59 99'/%3E%3C/g%3E%3Ccircle cx='50' cy='59' r='.9' fill='%23fff' fill-opacity='.7'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.b-football { background: repeating-linear-gradient(180deg, #2E7D4B 0 16.66%, #378C58 16.66% 33.33%); }
+.b-football::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 96' preserveAspectRatio='none'%3E%3Cg stroke='%23fff' stroke-opacity='.5' stroke-width='.35' fill='none'%3E%3Cline x1='0' y1='8' x2='100' y2='8'/%3E%3Cline x1='0' y1='16' x2='100' y2='16'/%3E%3Cline x1='0' y1='24' x2='100' y2='24'/%3E%3Cline x1='0' y1='32' x2='100' y2='32'/%3E%3Cline x1='0' y1='40' x2='100' y2='40'/%3E%3Cline x1='0' y1='48' x2='100' y2='48'/%3E%3Cline x1='0' y1='56' x2='100' y2='56'/%3E%3Cline x1='0' y1='64' x2='100' y2='64'/%3E%3Cline x1='0' y1='72' x2='100' y2='72'/%3E%3Cline x1='0' y1='80' x2='100' y2='80'/%3E%3Cline x1='0' y1='88' x2='100' y2='88'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-opacity='.45' stroke-width='.3'%3E%3Cline x1='36' y1='0' x2='36' y2='1.2'/%3E%3Cline x1='36' y1='2' x2='36' y2='3.2'/%3E%3Cline x1='36' y1='4' x2='36' y2='5.2'/%3E%3Cline x1='36' y1='6' x2='36' y2='7.2'/%3E%3Cline x1='36' y1='8' x2='36' y2='9.2'/%3E%3Cline x1='36' y1='10' x2='36' y2='11.2'/%3E%3Cline x1='36' y1='12' x2='36' y2='13.2'/%3E%3Cline x1='36' y1='14' x2='36' y2='15.2'/%3E%3Cline x1='36' y1='16' x2='36' y2='17.2'/%3E%3Cline x1='36' y1='18' x2='36' y2='19.2'/%3E%3Cline x1='36' y1='20' x2='36' y2='21.2'/%3E%3Cline x1='36' y1='22' x2='36' y2='23.2'/%3E%3Cline x1='36' y1='24' x2='36' y2='25.2'/%3E%3Cline x1='36' y1='26' x2='36' y2='27.2'/%3E%3Cline x1='36' y1='28' x2='36' y2='29.2'/%3E%3Cline x1='36' y1='30' x2='36' y2='31.2'/%3E%3Cline x1='36' y1='32' x2='36' y2='33.2'/%3E%3Cline x1='36' y1='34' x2='36' y2='35.2'/%3E%3Cline x1='36' y1='36' x2='36' y2='37.2'/%3E%3Cline x1='36' y1='38' x2='36' y2='39.2'/%3E%3Cline x1='36' y1='40' x2='36' y2='41.2'/%3E%3Cline x1='36' y1='42' x2='36' y2='43.2'/%3E%3Cline x1='36' y1='44' x2='36' y2='45.2'/%3E%3Cline x1='36' y1='46' x2='36' y2='47.2'/%3E%3Cline x1='36' y1='48' x2='36' y2='49.2'/%3E%3Cline x1='36' y1='50' x2='36' y2='51.2'/%3E%3Cline x1='36' y1='52' x2='36' y2='53.2'/%3E%3Cline x1='36' y1='54' x2='36' y2='55.2'/%3E%3Cline x1='36' y1='56' x2='36' y2='57.2'/%3E%3Cline x1='36' y1='58' x2='36' y2='59.2'/%3E%3Cline x1='36' y1='60' x2='36' y2='61.2'/%3E%3Cline x1='36' y1='62' x2='36' y2='63.2'/%3E%3Cline x1='36' y1='64' x2='36' y2='65.2'/%3E%3Cline x1='36' y1='66' x2='36' y2='67.2'/%3E%3Cline x1='36' y1='68' x2='36' y2='69.2'/%3E%3Cline x1='36' y1='70' x2='36' y2='71.2'/%3E%3Cline x1='36' y1='72' x2='36' y2='73.2'/%3E%3Cline x1='36' y1='74' x2='36' y2='75.2'/%3E%3Cline x1='36' y1='76' x2='36' y2='77.2'/%3E%3Cline x1='36' y1='78' x2='36' y2='79.2'/%3E%3Cline x1='36' y1='80' x2='36' y2='81.2'/%3E%3Cline x1='36' y1='82' x2='36' y2='83.2'/%3E%3Cline x1='36' y1='84' x2='36' y2='85.2'/%3E%3Cline x1='36' y1='86' x2='36' y2='87.2'/%3E%3Cline x1='36' y1='88' x2='36' y2='89.2'/%3E%3Cline x1='36' y1='90' x2='36' y2='91.2'/%3E%3Cline x1='36' y1='92' x2='36' y2='93.2'/%3E%3Cline x1='36' y1='94' x2='36' y2='95.2'/%3E%3Cline x1='64' y1='0' x2='64' y2='1.2'/%3E%3Cline x1='64' y1='2' x2='64' y2='3.2'/%3E%3Cline x1='64' y1='4' x2='64' y2='5.2'/%3E%3Cline x1='64' y1='6' x2='64' y2='7.2'/%3E%3Cline x1='64' y1='8' x2='64' y2='9.2'/%3E%3Cline x1='64' y1='10' x2='64' y2='11.2'/%3E%3Cline x1='64' y1='12' x2='64' y2='13.2'/%3E%3Cline x1='64' y1='14' x2='64' y2='15.2'/%3E%3Cline x1='64' y1='16' x2='64' y2='17.2'/%3E%3Cline x1='64' y1='18' x2='64' y2='19.2'/%3E%3Cline x1='64' y1='20' x2='64' y2='21.2'/%3E%3Cline x1='64' y1='22' x2='64' y2='23.2'/%3E%3Cline x1='64' y1='24' x2='64' y2='25.2'/%3E%3Cline x1='64' y1='26' x2='64' y2='27.2'/%3E%3Cline x1='64' y1='28' x2='64' y2='29.2'/%3E%3Cline x1='64' y1='30' x2='64' y2='31.2'/%3E%3Cline x1='64' y1='32' x2='64' y2='33.2'/%3E%3Cline x1='64' y1='34' x2='64' y2='35.2'/%3E%3Cline x1='64' y1='36' x2='64' y2='37.2'/%3E%3Cline x1='64' y1='38' x2='64' y2='39.2'/%3E%3Cline x1='64' y1='40' x2='64' y2='41.2'/%3E%3Cline x1='64' y1='42' x2='64' y2='43.2'/%3E%3Cline x1='64' y1='44' x2='64' y2='45.2'/%3E%3Cline x1='64' y1='46' x2='64' y2='47.2'/%3E%3Cline x1='64' y1='48' x2='64' y2='49.2'/%3E%3Cline x1='64' y1='50' x2='64' y2='51.2'/%3E%3Cline x1='64' y1='52' x2='64' y2='53.2'/%3E%3Cline x1='64' y1='54' x2='64' y2='55.2'/%3E%3Cline x1='64' y1='56' x2='64' y2='57.2'/%3E%3Cline x1='64' y1='58' x2='64' y2='59.2'/%3E%3Cline x1='64' y1='60' x2='64' y2='61.2'/%3E%3Cline x1='64' y1='62' x2='64' y2='63.2'/%3E%3Cline x1='64' y1='64' x2='64' y2='65.2'/%3E%3Cline x1='64' y1='66' x2='64' y2='67.2'/%3E%3Cline x1='64' y1='68' x2='64' y2='69.2'/%3E%3Cline x1='64' y1='70' x2='64' y2='71.2'/%3E%3Cline x1='64' y1='72' x2='64' y2='73.2'/%3E%3Cline x1='64' y1='74' x2='64' y2='75.2'/%3E%3Cline x1='64' y1='76' x2='64' y2='77.2'/%3E%3Cline x1='64' y1='78' x2='64' y2='79.2'/%3E%3Cline x1='64' y1='80' x2='64' y2='81.2'/%3E%3Cline x1='64' y1='82' x2='64' y2='83.2'/%3E%3Cline x1='64' y1='84' x2='64' y2='85.2'/%3E%3Cline x1='64' y1='86' x2='64' y2='87.2'/%3E%3Cline x1='64' y1='88' x2='64' y2='89.2'/%3E%3Cline x1='64' y1='90' x2='64' y2='91.2'/%3E%3Cline x1='64' y1='92' x2='64' y2='93.2'/%3E%3Cline x1='64' y1='94' x2='64' y2='95.2'/%3E%3C/g%3E%3Crect x='.3' y='.3' width='99.4' height='95.4' fill='none' stroke='%23fff' stroke-opacity='.6' stroke-width='.6'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.b-basketball { background: repeating-linear-gradient(90deg, #C58A4B 0 4.4%, #CF9658 4.4% 8.8%, #BE8244 8.8% 13.2%), #C58A4B; }
+.b-basketball::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 84' preserveAspectRatio='none'%3E%3Cg stroke='%23fff' stroke-opacity='.8' fill='none' stroke-width='.5'%3E%3Crect x='3' y='3' width='73' height='78'/%3E%3Crect x='30' y='60' width='19' height='21' fill='%23B2552F' fill-opacity='.45'/%3E%3Ccircle cx='39.5' cy='60' r='9.5'/%3E%3Cpath d='M8 81 L8 58 A31.5 31.5 0 0 1 71 58 L71 81'/%3E%3Cpath d='M30.5 3 A9 9 0 0 0 48.5 3'/%3E%3Cline x1='35' y1='79.5' x2='44' y2='79.5' stroke-width='.9'/%3E%3C/g%3E%3Ccircle cx='39.5' cy='76.5' r='1.8' fill='none' stroke='%23E8541E' stroke-width='.6'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35  0 0 0 0 .2  0 0 0 0 .08  0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); background-size: 100% 100%, 240px 240px; background-blend-mode: normal, multiply; }
+.benchbox { position: absolute; right: 0; top: 0; bottom: 0; width: 22%; background: linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,.5)), repeating-linear-gradient(0deg, #3A4656 0 6px, #333E4D 6px 12px); border-left: 2px solid rgba(255,255,255,.5); }
+.benchbox span { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+.b-baseball { background: repeating-linear-gradient(45deg, #3B8554 0 7%, #43925D 7% 14%); }
+.b-baseball::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+.b-baseball.diamond::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 90' preserveAspectRatio='none'%3E%3Cpath d='M0 38 Q50 -16 100 38 L100 0 L0 0 Z' fill='%231F4D32'/%3E%3Cpath d='M0 38 Q50 -16 100 38' fill='none' stroke='%23F2C94C' stroke-width='.8'/%3E%3Cpath d='M50 88 L82 62 L50 36 L18 62 Z' fill='%234C9A63' stroke='%23C99A63' stroke-width='9' stroke-linejoin='round'/%3E%3Ccircle cx='50' cy='62' r='3.2' fill='%23C99A63'/%3E%3Cg stroke='%23fff' stroke-opacity='.8' stroke-width='.4'%3E%3Cline x1='50' y1='88' x2='0' y2='38'/%3E%3Cline x1='50' y1='88' x2='100' y2='38'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Crect x='79.5' y='59.5' width='5' height='5' transform='rotate(45 82 62)'/%3E%3Crect x='47.5' y='33.5' width='5' height='5' transform='rotate(45 50 36)'/%3E%3Crect x='15.5' y='59.5' width='5' height='5' transform='rotate(45 18 62)'/%3E%3Cpath d='M50 90 L53 87 L53 85 L47 85 L47 87 Z'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 100% 100%, 180px 180px; }
+
+#lineup, #lineup .side { width: 100%; }
+.av { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--tc, var(--line)); overflow: hidden; flex: none; }
+.av .ini { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.av.ok .ini { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; font-size: 9px; line-height: 1; padding: 2px 0 3px; color: #fff; background: linear-gradient(transparent, rgba(13,27,46,.75)); }
+.cand-head .av { width: 40px; height: 40px; }
+.node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: 21%; max-width: 86px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: center; }
+.node .av { width: 40px; height: 40px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.node .sc { position: absolute; top: -4px; right: calc(50% - 29px); background: var(--ink); color: #fff; font-family: var(--font-mono); font-size: 10px; font-weight: 700; border-radius: 9px; padding: 1px 5px; line-height: 1.3; }
+.node .nl { font-size: 10px; line-height: 1.15; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.7); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node .nl i { font-style: normal; font-family: var(--font-mono); opacity: .8; margin-right: 2px; }
+.node.open .av { background: rgba(255,255,255,.12); border: 2px dashed rgba(255,255,255,.75); }
+.node.open .pos { font-family: var(--font-mono); font-size: 11px; color: #fff; font-weight: 700; }
+.node.can .av { background: rgba(255,255,255,.3); border-style: solid; animation: pulse 1.2s ease-in-out infinite; }
+.node.can { cursor: pointer; }
+.b-football .node { width: 13%; }
+.b-football .node .av { width: 34px; height: 34px; }
+.b-football .node .av .ini { font-size: 11px; }
+.b-football .node .sc { right: calc(50% - 25px); font-size: 9px; padding: 0 4px; }
+.b-football .node .nl { font-size: 9px; }
+.b-football .node { width: 13%; }
+.b-football .node .av { width: 34px; height: 34px; }
+.b-football .node .av .ini { font-size: 11px; }
+.b-football .node .av.ok .ini { font-size: 8px; }
+.b-football .node .sc { right: calc(50% - 25px); font-size: 9px; padding: 0 4px; }
+.b-football .node .nl { font-size: 9px; }
+@keyframes pulse { 50% { transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .node.can .av { animation: none; } }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow" id="eyebrow">Fan-made draft game</p>
+      <h1>Dex League</h1>
+    </div>
+    <div class="topbtns"><button class="ghost" data-action="versusToggle" id="vsBtn">Play friends</button><button class="ghost" data-action="reset" id="resetBtn">Start over</button></div>
+  </header>
+  <p class="lede" id="lede"></p>
+  <div class="progress"><span class="num" id="count">0/22</span><div class="pbar"><i id="pfill"></i></div></div>
+  <section id="schedule"></section>
+  <section id="rollPanel"></section>
+  <section id="resultPanel"></section>
+  <section id="lineup" class="wrap" style="gap:18px"></section>
+  <section id="versus" class="wrap"></section>
+  <footer>Unofficial fan project. Not affiliated with or endorsed by Nintendo, Game Freak, The Pokémon Company or any sports league. Base stats and sizes are entered by hand and may differ slightly from the games.</footer>
+</main>
+
+
+<script>
+/*CORE*/
+const STAT_KEYS = ['hp','atk','def','spa','spd','spe'];
+const NORM = 130;        // a base stat at or above this counts as a full bar
+
+const RAW = `Bulbasaur|Grass/Poison|45,49,49,65,65,45|Overgrow
+Venusaur|Grass/Poison|80,82,83,100,100,80|Overgrow
+Charizard|Fire/Flying|78,84,78,109,85,100|Blaze
+Blastoise|Water|79,83,100,85,105,78|Torrent
+Butterfree|Bug/Flying|60,45,50,90,80,70|Compound Eyes
+Beedrill|Bug/Poison|65,90,40,45,80,75|Swarm
+Pidgeot|Normal/Flying|83,80,75,70,70,101|Keen Eye
+Raticate|Normal|55,81,60,50,70,97|Guts
+Fearow|Normal/Flying|65,90,65,61,61,100|Keen Eye
+Arbok|Poison|60,95,69,65,79,80|Intimidate
+Pikachu|Electric|35,55,40,50,50,90|Static
+Raichu|Electric|60,90,55,90,80,110|Static
+Sandslash|Ground|75,100,110,45,55,65|Sand Veil
+Nidoking|Poison/Ground|81,102,77,85,75,85|Sheer Force
+Nidoqueen|Poison/Ground|90,92,87,75,85,76|Sheer Force
+Clefable|Fairy|95,70,73,95,90,60|Magic Guard
+Ninetales|Fire|73,76,75,81,100,100|Flash Fire
+Wigglytuff|Normal/Fairy|140,70,45,85,50,45|Cute Charm
+Golbat|Poison/Flying|75,80,70,65,75,90|Inner Focus
+Vileplume|Grass/Poison|75,80,85,110,90,50|Chlorophyll
+Parasect|Bug/Grass|60,95,80,60,80,30|Dry Skin
+Venomoth|Bug/Poison|70,65,60,90,75,90|Tinted Lens
+Dugtrio|Ground|35,100,50,50,70,120|Arena Trap
+Persian|Normal|65,70,60,65,65,115|Limber
+Primeape|Fighting|65,105,60,60,70,95|Vital Spirit
+Arcanine|Fire|90,110,80,100,80,95|Intimidate
+Poliwrath|Water/Fighting|90,95,95,70,90,70|Water Absorb
+Alakazam|Psychic|55,50,45,135,95,120|Synchronize
+Machamp|Fighting|90,130,80,65,85,55|Guts
+Victreebel|Grass/Poison|80,105,65,100,70,70|Chlorophyll
+Tentacruel|Water/Poison|80,70,65,80,120,100|Clear Body
+Golem|Rock/Ground|80,120,130,55,65,45|Sturdy
+Rapidash|Fire|65,100,70,80,80,105|Flash Fire
+Slowbro|Water/Psychic|95,75,110,100,80,30|Oblivious
+Magneton|Electric/Steel|50,60,95,120,70,70|Sturdy
+Farfetch'd|Normal/Flying|52,90,55,58,62,60|Keen Eye
+Dodrio|Normal/Flying|60,110,70,60,60,110|Early Bird
+Dewgong|Water/Ice|90,70,80,70,95,70|Thick Fat
+Muk|Poison|105,105,75,65,100,50|Stench
+Cloyster|Water/Ice|50,95,180,85,45,70|Shell Armor
+Gengar|Ghost/Poison|60,65,60,130,75,110|Levitate
+Onix|Rock/Ground|35,45,160,30,45,70|Sturdy
+Hypno|Psychic|85,73,70,73,115,67|Insomnia
+Kingler|Water|55,130,115,50,50,75|Hyper Cutter
+Electrode|Electric|60,50,70,80,80,150|Soundproof
+Exeggutor|Grass/Psychic|95,95,85,125,75,55|Chlorophyll
+Marowak|Ground|60,80,110,50,80,45|Rock Head
+Hitmonlee|Fighting|50,120,53,35,110,87|Limber
+Hitmonchan|Fighting|50,105,79,35,110,76|Keen Eye
+Lickitung|Normal|90,55,75,60,75,30|Own Tempo
+Weezing|Poison|65,90,120,85,70,60|Levitate
+Rhydon|Ground/Rock|105,130,120,45,45,40|Lightning Rod
+Chansey|Normal|250,5,5,35,105,50|Natural Cure
+Tangela|Grass|65,55,115,100,40,60|Chlorophyll
+Kangaskhan|Normal|105,95,80,40,80,90|Early Bird
+Seaking|Water|80,92,65,65,80,68|Swift Swim
+Starmie|Water/Psychic|60,75,85,100,85,115|Illuminate
+Mr. Mime|Psychic/Fairy|40,45,65,100,120,90|Filter
+Scyther|Bug/Flying|70,110,80,55,80,105|Swarm
+Jynx|Ice/Psychic|65,50,35,115,95,95|Oblivious
+Electabuzz|Electric|65,83,57,95,85,105|Static
+Magmar|Fire|65,95,57,100,85,93|Flame Body
+Pinsir|Bug|65,125,100,55,70,85|Hyper Cutter
+Tauros|Normal|75,100,95,40,70,110|Intimidate
+Gyarados|Water/Flying|95,125,79,60,100,81|Intimidate
+Lapras|Water/Ice|130,85,80,85,95,60|Water Absorb
+Ditto|Normal|48,48,48,48,48,48|Limber
+Vaporeon|Water|130,65,60,110,95,65|Water Absorb
+Jolteon|Electric|65,65,60,110,95,130|Volt Absorb
+Flareon|Fire|65,130,60,95,110,65|Flash Fire
+Porygon|Normal|65,60,70,85,75,40|Trace
+Omastar|Rock/Water|70,60,125,115,70,55|Shell Armor
+Kabutops|Rock/Water|60,115,105,65,70,80|Battle Armor
+Aerodactyl|Rock/Flying|80,105,65,60,75,130|Pressure
+Snorlax|Normal|160,110,65,65,110,30|Thick Fat
+Dragonite|Dragon/Flying|91,134,95,100,100,80|Inner Focus
+Meganium|Grass|80,82,100,83,100,80|Overgrow
+Typhlosion|Fire|78,84,78,109,85,100|Blaze
+Feraligatr|Water|85,105,100,79,83,78|Torrent
+Crobat|Poison/Flying|85,90,80,70,80,130|Inner Focus
+Ampharos|Electric|90,75,85,115,90,55|Static
+Azumarill|Water/Fairy|100,50,80,60,80,50|Thick Fat
+Sudowoodo|Rock|70,100,115,30,65,30|Sturdy
+Espeon|Psychic|65,65,60,130,95,110|Synchronize
+Umbreon|Dark|95,65,110,60,130,65|Synchronize
+Steelix|Steel/Ground|75,85,200,55,65,30|Sturdy
+Scizor|Bug/Steel|70,130,100,55,80,65|Technician
+Heracross|Bug/Fighting|80,125,75,40,95,85|Guts
+Houndoom|Dark/Fire|75,90,50,110,80,95|Flash Fire
+Donphan|Ground|90,120,120,60,60,50|Sturdy
+Tyranitar|Rock/Dark|100,134,110,95,100,61|Sand Stream
+Blissey|Normal|255,10,10,75,135,55|Natural Cure
+Skarmory|Steel/Flying|65,80,140,40,70,70|Sturdy
+Kingdra|Water/Dragon|75,95,95,95,95,85|Swift Swim
+Porygon2|Normal|85,80,90,105,95,60|Trace
+Hitmontop|Fighting|50,95,95,35,110,70|Intimidate
+Miltank|Normal|95,80,105,40,70,100|Thick Fat
+Sceptile|Grass|70,85,65,105,85,120|Overgrow
+Blaziken|Fire/Fighting|80,120,70,110,70,80|Blaze
+Swampert|Water/Ground|100,110,90,85,90,60|Torrent
+Gardevoir|Psychic/Fairy|68,65,65,125,115,80|Trace
+Breloom|Grass/Fighting|60,130,80,60,60,70|Technician
+Slaking|Normal|150,160,100,95,65,100|Truant
+Exploud|Normal|104,91,63,91,63,68|Soundproof
+Hariyama|Fighting|144,120,60,40,60,50|Thick Fat
+Aggron|Steel/Rock|70,110,180,60,60,50|Sturdy
+Manectric|Electric|70,75,60,105,60,105|Lightning Rod
+Camerupt|Fire/Ground|70,100,70,105,75,40|Magma Armor
+Flygon|Ground/Dragon|80,100,80,80,80,100|Levitate
+Cacturne|Grass/Dark|70,115,60,115,60,55|Sand Veil
+Altaria|Dragon/Flying|75,70,90,70,105,80|Natural Cure
+Milotic|Water|95,60,79,100,125,81|Marvel Scale
+Salamence|Dragon/Flying|95,135,80,110,80,100|Intimidate
+Metagross|Steel/Psychic|80,135,130,95,90,70|Clear Body
+Absol|Dark|65,130,60,75,60,75|Super Luck
+Walrein|Ice/Water|110,80,90,95,90,65|Thick Fat
+Glalie|Ice|80,80,80,80,80,80|Inner Focus
+Crawdaunt|Water/Dark|63,120,85,90,55,55|Hyper Cutter
+Claydol|Ground/Psychic|60,70,105,70,120,75|Levitate
+Cradily|Rock/Grass|86,81,97,81,107,43|Suction Cups
+Armaldo|Rock/Bug|75,125,100,70,80,45|Battle Armor
+Torterra|Grass/Ground|95,109,105,75,85,56|Overgrow
+Infernape|Fire/Fighting|76,104,71,104,71,108|Blaze
+Empoleon|Water/Steel|84,86,88,111,101,60|Torrent
+Staraptor|Normal/Flying|85,120,70,50,60,100|Intimidate
+Luxray|Electric|80,120,79,95,79,70|Intimidate
+Roserade|Grass/Poison|60,70,65,125,105,90|Natural Cure
+Rampardos|Rock|97,165,60,65,50,58|Mold Breaker
+Bastiodon|Rock/Steel|60,52,168,47,138,30|Sturdy
+Garchomp|Dragon/Ground|108,130,95,80,85,102|Sand Veil
+Lucario|Fighting/Steel|70,110,70,115,70,90|Inner Focus
+Hippowdon|Ground|108,112,118,68,72,47|Sand Stream
+Toxicroak|Poison/Fighting|83,106,65,86,65,85|Dry Skin
+Abomasnow|Grass/Ice|90,92,75,92,85,60|Snow Warning
+Weavile|Dark/Ice|70,120,65,45,85,125|Pressure
+Magnezone|Electric/Steel|70,70,115,130,90,60|Magnet Pull
+Electivire|Electric|75,123,67,95,85,95|Motor Drive
+Magmortar|Fire|75,95,67,125,95,83|Flame Body
+Togekiss|Fairy/Flying|85,50,95,120,115,80|Super Luck
+Mamoswine|Ice/Ground|110,130,80,70,60,80|Thick Fat
+Gallade|Psychic/Fighting|68,125,65,65,115,80|Steadfast
+Dusknoir|Ghost|45,100,135,65,135,45|Pressure
+Froslass|Ice/Ghost|70,80,70,80,70,110|Snow Cloak
+Gliscor|Ground/Flying|75,95,125,45,75,95|Hyper Cutter
+Leafeon|Grass|65,110,130,60,65,95|Leaf Guard
+Glaceon|Ice|65,60,110,130,95,65|Snow Cloak
+Yanmega|Bug/Flying|86,76,86,116,56,95|Speed Boost
+Spiritomb|Ghost/Dark|50,92,108,92,108,35|Pressure
+Drapion|Poison/Dark|70,90,110,60,75,95|Battle Armor
+Lopunny|Normal|65,76,84,54,96,105|Cute Charm
+Golduck|Water|80,82,78,95,80,85|Cloud Nine
+Politoed|Water|90,75,75,90,100,70|Water Absorb
+Quagsire|Water/Ground|95,85,85,65,65,35|Water Absorb
+Forretress|Bug/Steel|75,90,140,60,60,40|Sturdy
+Granbull|Fairy|90,120,75,60,60,45|Intimidate
+Ursaring|Normal|90,130,75,75,75,55|Guts
+Octillery|Water|75,105,75,105,75,45|Suction Cups
+Mightyena|Dark|70,90,70,60,60,70|Intimidate
+Ludicolo|Water/Grass|80,70,70,90,100,70|Swift Swim
+Shiftry|Grass/Dark|90,100,60,90,60,80|Chlorophyll
+Swellow|Normal/Flying|60,85,60,75,50,125|Guts
+Pelipper|Water/Flying|60,50,100,95,70,65|Keen Eye
+Masquerain|Bug/Flying|70,60,62,100,82,80|Intimidate
+Ninjask|Bug/Flying|61,90,45,50,50,160|Speed Boost
+Medicham|Fighting/Psychic|60,60,75,60,75,80|Pure Power
+Sharpedo|Water/Dark|70,120,40,95,40,95|Rough Skin
+Torkoal|Fire|70,85,140,85,70,20|White Smoke
+Zangoose|Normal|73,115,60,60,60,90|Immunity
+Banette|Ghost|64,115,65,83,63,65|Insomnia
+Dusclops|Ghost|40,70,130,60,130,25|Pressure
+Tropius|Grass/Flying|99,68,83,72,87,51|Chlorophyll
+Mawile|Steel/Fairy|50,85,85,55,55,50|Hyper Cutter
+Honchkrow|Dark/Flying|100,125,52,105,52,71|Super Luck
+Mismagius|Ghost|60,60,60,105,105,105|Levitate
+Ambipom|Normal|75,100,66,60,66,115|Technician
+Floatzel|Water|85,105,55,85,50,115|Swift Swim
+Purugly|Normal|71,82,64,64,59,112|Thick Fat
+Rhyperior|Ground/Rock|115,140,130,55,55,40|Solid Rock
+Tangrowth|Grass|100,100,125,110,50,50|Chlorophyll
+Probopass|Rock/Steel|60,55,145,75,150,40|Sturdy
+Gastrodon|Water/Ground|111,83,68,92,82,39|Sticky Hold
+Skuntank|Poison/Dark|103,93,67,71,61,84|Stench
+Bronzong|Steel/Psychic|67,89,116,79,116,33|Levitate
+Lickilicky|Normal|110,85,95,80,95,50|Own Tempo
+Drifblim|Ghost/Flying|150,80,44,90,54,80|Aftermath
+Porygon-Z|Normal|85,80,70,135,75,90|Adaptability`;
+
+const RAW_LEG = `Articuno|Ice/Flying|90,85,100,95,125,85|Pressure
+Zapdos|Electric/Flying|90,90,85,125,90,100|Pressure
+Moltres|Fire/Flying|90,100,90,125,85,90|Pressure
+Raikou|Electric|90,85,75,115,100,115|Pressure
+Entei|Fire|115,115,85,90,75,100|Pressure
+Suicune|Water|100,75,115,90,115,85|Pressure
+Mewtwo|Psychic|106,110,90,154,90,130|Pressure
+Mew|Psychic|100,100,100,100,100,100|Synchronize
+Lugia|Psychic/Flying|106,90,130,90,154,110|Pressure
+Ho-Oh|Fire/Flying|106,130,90,110,154,90|Pressure
+Latias|Dragon/Psychic|80,80,90,110,130,110|Levitate
+Latios|Dragon/Psychic|80,90,80,130,110,110|Levitate
+Rayquaza|Dragon/Flying|105,150,90,150,90,95|Air Lock
+Groudon|Ground|100,150,140,100,90,90|Drought
+Kyogre|Water|100,100,90,150,140,90|Drizzle
+Dialga|Steel/Dragon|100,120,120,150,100,90|Pressure
+Palkia|Water/Dragon|90,120,100,150,120,100|Pressure
+Regigigas|Normal|110,160,110,80,110,100|Slow Start
+Giratina|Ghost/Dragon|150,100,120,100,120,90|Pressure
+Arceus|Normal|120,120,120,120,120,120|Multitype
+Celebi|Psychic/Grass|100,100,100,100,100,100|Natural Cure
+Deoxys|Psychic|50,150,50,150,50,150|Pressure
+Jirachi|Steel/Psychic|100,100,100,100,100,100|Serene Grace
+Regirock|Rock|80,100,200,50,100,50|Clear Body
+Regice|Ice|80,50,100,100,200,50|Clear Body
+Registeel|Steel|80,75,150,75,150,50|Clear Body
+Heatran|Fire/Steel|91,90,106,130,106,77|Flash Fire
+Cresselia|Psychic|120,70,120,75,130,85|Levitate
+Darkrai|Dark|70,90,90,135,90,125|Bad Dreams`;
+
+/* Height (m) and weight (kg), entered by hand. */
+const SIZE_RAW = `Bulbasaur|0.7|6.9
+Venusaur|2.0|100
+Charizard|1.7|90.5
+Blastoise|1.6|85.5
+Butterfree|1.1|32
+Beedrill|1.0|29.5
+Pidgeot|1.5|39.5
+Raticate|0.7|18.5
+Fearow|1.2|38
+Arbok|3.5|65
+Pikachu|0.4|6
+Raichu|0.8|30
+Sandslash|1.0|29.5
+Nidoking|1.4|62
+Nidoqueen|1.3|60
+Clefable|1.3|40
+Ninetales|1.1|19.9
+Wigglytuff|1.0|12
+Golbat|1.6|55
+Vileplume|1.2|18.6
+Parasect|1.0|29.5
+Venomoth|1.5|12.5
+Dugtrio|0.7|33.3
+Persian|1.0|32
+Primeape|1.0|32
+Arcanine|1.9|155
+Poliwrath|1.3|54
+Alakazam|1.5|48
+Machamp|1.6|130
+Victreebel|1.7|15.5
+Tentacruel|1.6|55
+Golem|1.4|300
+Rapidash|1.7|95
+Slowbro|1.6|78.5
+Magneton|1.0|60
+Farfetch'd|0.8|15
+Dodrio|1.8|85.2
+Dewgong|1.7|120
+Muk|1.2|30
+Cloyster|1.5|132.5
+Gengar|1.5|40.5
+Onix|8.8|210
+Hypno|1.6|75.6
+Kingler|1.3|60
+Electrode|1.2|66.6
+Exeggutor|2.0|120
+Marowak|1.0|45
+Hitmonlee|1.5|49.8
+Hitmonchan|1.4|50.2
+Lickitung|1.2|65.5
+Weezing|1.2|9.5
+Rhydon|1.9|120
+Chansey|1.1|34.6
+Tangela|1.0|35
+Kangaskhan|2.2|80
+Seaking|1.3|39
+Starmie|1.1|80
+Mr. Mime|1.3|54.5
+Scyther|1.5|56
+Jynx|1.4|40.6
+Electabuzz|1.1|30
+Magmar|1.3|44.5
+Pinsir|1.5|55
+Tauros|1.4|88.4
+Gyarados|6.5|235
+Lapras|2.5|220
+Ditto|0.3|4
+Vaporeon|1.0|29
+Jolteon|0.8|24.5
+Flareon|0.9|25
+Porygon|0.8|36.5
+Omastar|1.0|35
+Kabutops|1.3|40.5
+Aerodactyl|1.8|59
+Snorlax|2.1|460
+Dragonite|2.2|210
+Golduck|1.7|76.6
+Meganium|1.8|100.5
+Typhlosion|1.7|79.5
+Feraligatr|2.3|88.8
+Crobat|1.8|75
+Ampharos|1.4|61.5
+Azumarill|0.8|28.5
+Sudowoodo|1.2|38
+Espeon|0.9|26.5
+Umbreon|1.0|27
+Steelix|9.2|400
+Scizor|1.8|118
+Heracross|1.5|54
+Houndoom|1.4|35
+Donphan|1.1|120
+Tyranitar|2.0|202
+Blissey|1.5|46.8
+Skarmory|1.7|50.5
+Kingdra|1.8|152
+Porygon2|0.6|32.5
+Hitmontop|1.4|48
+Miltank|1.2|75.5
+Politoed|1.1|33.9
+Quagsire|1.4|75
+Forretress|1.2|125.8
+Granbull|1.4|48.7
+Ursaring|1.8|125.8
+Octillery|0.9|28.5
+Sceptile|1.7|52.2
+Blaziken|1.9|52
+Swampert|1.5|81.9
+Gardevoir|1.6|48.4
+Breloom|1.2|39.2
+Slaking|2.0|130.5
+Exploud|1.5|84
+Hariyama|2.3|253.8
+Aggron|2.1|360
+Manectric|1.5|40.2
+Camerupt|2.1|220
+Flygon|2.0|82
+Cacturne|1.3|77.4
+Altaria|1.1|20.6
+Milotic|6.2|162
+Salamence|1.5|102.6
+Metagross|1.6|550
+Absol|1.2|47
+Walrein|1.4|150.6
+Glalie|1.5|256.5
+Crawdaunt|1.1|32.8
+Claydol|1.5|108
+Cradily|1.5|60.4
+Armaldo|1.5|68.2
+Mightyena|1.0|37
+Ludicolo|1.5|55
+Shiftry|1.3|59.6
+Swellow|0.7|19.8
+Pelipper|1.2|28
+Masquerain|0.8|3.6
+Ninjask|0.8|12
+Medicham|1.3|31.5
+Sharpedo|1.8|88.8
+Torkoal|0.5|80.4
+Zangoose|1.3|40.3
+Banette|1.1|12.5
+Dusclops|1.6|30.6
+Tropius|2.0|100
+Mawile|0.6|11.5
+Torterra|2.2|310
+Infernape|1.2|55
+Empoleon|1.7|84.5
+Staraptor|1.2|24.9
+Luxray|1.4|42
+Roserade|0.9|14.5
+Rampardos|1.6|102.5
+Bastiodon|1.3|149.5
+Garchomp|1.9|95
+Lucario|1.2|54
+Hippowdon|2.0|300
+Toxicroak|1.3|44.4
+Abomasnow|2.2|135.5
+Weavile|1.1|34
+Magnezone|1.2|180
+Electivire|1.8|138.6
+Magmortar|1.6|68
+Togekiss|1.5|38
+Mamoswine|2.5|291
+Gallade|1.6|52
+Dusknoir|2.2|106.6
+Froslass|1.3|26.6
+Gliscor|2.0|42.5
+Leafeon|1.0|25.5
+Glaceon|0.8|25.9
+Yanmega|1.9|51.5
+Spiritomb|1.0|108
+Drapion|1.3|61.5
+Lopunny|1.2|33.3
+Honchkrow|0.9|27.3
+Mismagius|0.9|4.4
+Ambipom|1.2|20.3
+Floatzel|1.1|33.5
+Purugly|1.0|43.8
+Rhyperior|2.4|282.8
+Tangrowth|2.0|128.6
+Probopass|1.4|340
+Gastrodon|0.9|29.9
+Skuntank|1.0|38
+Bronzong|1.3|187
+Lickilicky|1.7|140
+Drifblim|1.2|15
+Porygon-Z|0.9|34
+Articuno|1.7|55.4
+Zapdos|1.6|52.6
+Moltres|2.0|60
+Raikou|1.9|178
+Entei|2.1|198
+Suicune|2.0|187
+Mewtwo|2.0|122
+Mew|0.4|4
+Lugia|5.2|216
+Ho-Oh|3.8|199
+Latias|1.4|40
+Latios|2.0|60
+Rayquaza|7.0|206.5
+Groudon|3.5|950
+Kyogre|4.5|352
+Dialga|5.4|683
+Palkia|4.2|336
+Regigigas|3.7|420
+Giratina|4.5|750
+Arceus|3.2|320
+Celebi|0.6|5
+Deoxys|1.7|60.8
+Jirachi|0.3|1.1
+Regirock|1.7|230
+Regice|1.8|175
+Registeel|1.9|205
+Heatran|1.7|430
+Cresselia|1.5|85.6
+Darkrai|1.5|50.5`;
+const SIZE = {};
+SIZE_RAW.trim().split('\n').forEach(l => { const [n, hh, ww] = l.split('|'); SIZE[n] = [Number(hh), Number(ww)]; });
+
+function parseMons(raw, legendary) {
+  return raw.trim().split('\n').map(line => {
+    const [name, types, stats, ability] = line.split('|');
+    const [hp, atk, def, spa, spd, spe] = stats.split(',').map(Number);
+    const sz = SIZE[name] || [1.2, 50];
+    return { name, types: types.split('/'), stats: { hp, atk, def, spa, spd, spe }, ability, legendary, height: sz[0], weight: sz[1] };
+  });
+}
+const MONS = parseMons(RAW, false);
+const LEGENDS = parseMons(RAW_LEG, true);
+/* Size percentiles within the whole pool, so "heavy" and "tall" are relative to these Pokémon. */
+{
+  const all = [...MONS, ...LEGENDS];
+  const sw = all.map(m => m.weight).sort((a, b) => a - b), sh = all.map(m => m.height).sort((a, b) => a - b);
+  const pct = (arr, v) => { let lt = 0, eq = 0; for (const x of arr) { if (x < v) lt++; else if (x === v) eq++; } return (lt + eq / 2) / arr.length * 100; };
+  all.forEach(m => { m.wPct = pct(sw, m.weight); m.hPct = pct(sh, m.height); });
+}
+
+const TYPE_COLOR = {
+  Normal:'#A8A77A', Fire:'#EE8130', Water:'#6390F0', Electric:'#F7D02C', Grass:'#7AC74C', Ice:'#96D9D6',
+  Fighting:'#C22E28', Poison:'#A33EA1', Ground:'#E2BF65', Flying:'#A98FF3', Psychic:'#F95587', Bug:'#A6B91A',
+  Rock:'#B6A136', Ghost:'#735797', Dragon:'#6F35FC', Dark:'#705746', Steel:'#B7B7CE', Fairy:'#D685AD'
+};
+
+/* Ability traits. A trait is a bonus when it suits the position. */
+const TRAIT_NAME = { ACC:'Accuracy', SPD:'Burst', PWR:'Power', WALL:'Wall' };
+const TRAIT_OF = {};
+[
+  ['ACC', ['Keen Eye','Compound Eyes','Super Luck','Sniper','Inner Focus','Synchronize','Trace','Illuminate','Good as Gold']],
+  ['SPD', ['Speed Boost','Gale Wings','Swift Swim','Sand Rush','Early Bird','Unburden','Motor Drive','Protean','Libero','Limber','Levitate','Prankster']],
+  ['PWR', ['Guts','Sheer Force','Iron Fist','Technician','Strong Jaw','Mold Breaker','Moxie','Defiant','Hyper Cutter','Rock Head','Intimidate','Unseen Fist','Pure Power','Rough Skin']],
+  ['WALL', ['Sturdy','Clear Body','Iron Barbs','Magic Guard','Shell Armor','Battle Armor','Thick Fat','Natural Cure','Overcoat','Filter','Marvel Scale','Purifying Salt','Soundproof','Unaware','Solid Rock','White Smoke']]
+].forEach(([t, list]) => list.forEach(a => { TRAIT_OF[a] = t; }));
+
+/* Type effectiveness: attacker -> [super effective, resisted, immune]. */
+const CHART = {
+  Normal:[[],['Rock','Steel'],['Ghost']],
+  Fire:[['Grass','Ice','Bug','Steel'],['Fire','Water','Rock','Dragon'],[]],
+  Water:[['Fire','Ground','Rock'],['Water','Grass','Dragon'],[]],
+  Electric:[['Water','Flying'],['Electric','Grass','Dragon'],['Ground']],
+  Grass:[['Water','Ground','Rock'],['Fire','Grass','Poison','Flying','Bug','Dragon','Steel'],[]],
+  Ice:[['Grass','Ground','Flying','Dragon'],['Fire','Water','Ice','Steel'],[]],
+  Fighting:[['Normal','Ice','Rock','Dark','Steel'],['Poison','Flying','Psychic','Bug','Fairy'],['Ghost']],
+  Poison:[['Grass','Fairy'],['Poison','Ground','Rock','Ghost'],['Steel']],
+  Ground:[['Fire','Electric','Poison','Rock','Steel'],['Grass','Bug'],['Flying']],
+  Flying:[['Grass','Fighting','Bug'],['Electric','Rock','Steel'],[]],
+  Psychic:[['Fighting','Poison'],['Psychic','Steel'],['Dark']],
+  Bug:[['Grass','Psychic','Dark'],['Fire','Fighting','Poison','Flying','Ghost','Steel','Fairy'],[]],
+  Rock:[['Fire','Ice','Flying','Bug'],['Fighting','Ground','Steel'],[]],
+  Ghost:[['Psychic','Ghost'],['Dark'],['Normal']],
+  Dragon:[['Dragon'],['Steel'],['Fairy']],
+  Dark:[['Psychic','Ghost'],['Fighting','Dark','Fairy'],[]],
+  Steel:[['Ice','Rock','Fairy'],['Fire','Water','Electric','Steel'],[]],
+  Fairy:[['Fighting','Dragon','Dark'],['Fire','Poison','Steel'],[]]
+};
+function eff(a, d) {
+  const c = CHART[a];
+  return c[0].includes(d) ? 2 : c[1].includes(d) ? 0.5 : c[2].includes(d) ? 0 : 1;
+}
+const lg = m => m === 0 ? -2 : Math.max(-2, Math.min(2, Math.log2(m)));
+/* How one Pokémon fares against a team of the given types: its best attack vs their types,
+   and their best attack vs its types. Range -2 (bad) to +2 (great). */
+function monEdge(mon, opp) {
+  if (!opp.length) return 0;
+  let atk = 0, def = 0;
+  for (const t of mon.types) { let m = 1; for (const d of opp) m *= eff(t, d); atk = Math.max(atk, m); }
+  for (const a of opp) { let m = 1; for (const d of mon.types) m *= eff(a, d); def = Math.max(def, m); }
+  return (lg(atk) - lg(def)) / 2;
+}
+
+/* Body plan, entered by hand: H = hands or claws that can grab and catch, L = strong running legs, F = wings or flight,
+   N = no usable limbs (serpents, orbs, blobs, shells). Soccer uses these to decide who suits which position. */
+const ANAT_LISTS = {
+  H: `Charizard,Blastoise,Sandslash,Nidoking,Nidoqueen,Clefable,Wigglytuff,Parasect,Primeape,Poliwrath,Alakazam,Machamp,Golem,Farfetch'd,Gengar,Hypno,Kingler,Marowak,Hitmonchan,Rhydon,Kangaskhan,Mr. Mime,Scyther,Jynx,Electabuzz,Magmar,Pinsir,Kabutops,Snorlax,Dragonite,Feraligatr,Scizor,Heracross,Tyranitar,Swampert,Gardevoir,Breloom,Slaking,Hariyama,Aggron,Cacturne,Crawdaunt,Armaldo,Infernape,Roserade,Lucario,Toxicroak,Abomasnow,Weavile,Electivire,Magmortar,Gallade,Dusknoir,Drapion,Ursaring,Medicham,Dusclops,Ambipom,Rhyperior,Tangrowth,Blaziken,Mewtwo,Mew,Groudon,Regigigas,Deoxys,Regirock,Regice,Registeel,Darkrai`,
+  L: `Ninetales,Persian,Primeape,Arcanine,Rapidash,Dodrio,Hitmonlee,Hitmontop,Tauros,Jolteon,Flareon,Vaporeon,Espeon,Umbreon,Leafeon,Glaceon,Houndoom,Mightyena,Manectric,Zangoose,Absol,Luxray,Shiftry,Sceptile,Blaziken,Infernape,Lucario,Gallade,Medicham,Lopunny,Ambipom,Purugly,Farfetch'd,Mamoswine,Rampardos,Garchomp,Staraptor,Weavile,Granbull,Nidoking,Electabuzz,Tyranitar,Raikou,Entei,Suicune,Arceus,Raticate,Skuntank,Typhlosion`,
+  F: `Charizard,Butterfree,Beedrill,Pidgeot,Fearow,Golbat,Venomoth,Scyther,Aerodactyl,Dragonite,Crobat,Scizor,Skarmory,Flygon,Altaria,Salamence,Staraptor,Togekiss,Gliscor,Yanmega,Swellow,Pelipper,Masquerain,Ninjask,Tropius,Honchkrow,Mismagius,Drifblim,Articuno,Zapdos,Moltres,Mew,Lugia,Ho-Oh,Latias,Latios,Rayquaza,Giratina,Celebi,Cresselia`,
+  N: `Arbok,Dugtrio,Tentacruel,Magneton,Dewgong,Muk,Cloyster,Onix,Electrode,Weezing,Tangela,Seaking,Starmie,Gyarados,Lapras,Ditto,Porygon,Omastar,Steelix,Kingdra,Porygon2,Milotic,Walrein,Glalie,Claydol,Cradily,Magnezone,Froslass,Spiritomb,Forretress,Octillery,Sharpedo,Bronzong,Gastrodon,Porygon-Z,Kyogre,Victreebel,Probopass`
+};
+{
+  const tags = {};
+  for (const k of Object.keys(ANAT_LISTS)) ANAT_LISTS[k].split(',').forEach(n => { (tags[n.trim()] = tags[n.trim()] || '').indexOf(k) < 0 && (tags[n.trim()] += k); });
+  [...MONS, ...LEGENDS].forEach(m => { m.anat = tags[m.name] || ''; });
+}
+const ANAT_NAME = { H: 'hands', L: 'legs', F: 'wings', N: 'no limbs' };
+
+/* ---------- Seeded helpers: schedules are fixed, so every player sees the same league ---------- */
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function seededShuffle(arr, seed) {
+  const r = rng(seed), a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ---------- Club pool: type-themed teams named after Gen 1-4 places ---------- */
+const CLUBS = [
+  ['Pewter Boulders',['Rock']], ['Cerulean Tidals',['Water']], ['Vermilion Voltage',['Electric']], ['Celadon Blooms',['Grass']],
+  ['Fuchsia Venom',['Poison']], ['Saffron Psychics',['Psychic']], ['Cinnabar Magma',['Fire']], ['Viridian Giants',['Ground']],
+  ['Johto Wardens',['Steel']], ['Hoenn Stormers',['Flying']], ['Sinnoh Frost',['Ice']], ['Mt. Silver Titans',['Fighting']],
+  ['Lavender Haunts',['Ghost']], ['Blackthorn Dragons',['Dragon']], ['Goldenrod Charmers',['Normal']], ['Azalea Hornets',['Bug']],
+  ['Mahogany Shadows',['Dark']], ['Hearthome Graces',['Fairy']], ['Violet Aviators',['Flying','Normal']], ['Olivine Lighthouse',['Steel','Water']],
+  ['Ecruteak Phantoms',['Ghost','Fire']], ['Lilycove Sirens',['Water','Fairy']], ['Mauville Sparks',['Electric','Steel']], ['Fallarbor Ash',['Fire','Rock']],
+  ['Pastoria Marshes',['Water','Poison']], ['Snowpoint Blizzards',['Ice','Water']], ['Canalave Ironclads',['Steel','Ground']], ['Veilstone Meteors',['Rock','Fighting']],
+  ['Sunyshore Flash',['Electric','Flying']], ['Rustboro Quarry',['Rock','Ground']], ['Petalburg Woods',['Grass','Bug']], ['Dewford Surf',['Water','Fighting']],
+  ['Lavaridge Embers',['Fire','Fighting']], ['Mossdeep Seers',['Psychic','Steel']], ['Sootopolis Deep',['Water','Dragon']], ['Eterna Thorns',['Grass','Poison']],
+  ['Oreburgh Miners',['Rock','Steel']], ['Celestic Chimes',['Psychic','Fairy']], ['Cianwood Breakers',['Fighting','Water']], ['Fortree Canopy',['Grass','Flying']],
+  ['Slateport Docks',['Water','Normal']], ['Jubilife Neon',['Normal','Electric']], ['Solaceon Ruins',['Psychic','Ground']], ['Floaroma Meadow',['Grass','Fairy']],
+  ['Cherrygrove Rovers',['Normal','Grass']], ['Twinleaf Frost',['Ice','Normal']]
+];
+/* Foreign opposition for the European Cup. */
+const EURO_CLUBS = [
+  ['Seafoam Islanders',['Ice','Water']], ['Safari Zone Wanderers',['Normal','Grass']], ['Sevii Sharks',['Water','Dark']], ['Frontier Brains',['Fighting','Normal']],
+  ['Distortion Wraiths',['Ghost','Dragon']], ['Spear Pillar Sentinels',['Dragon','Psychic']], ['Mt. Coronet Summit',['Rock','Ice']], ['Tin Tower Chimes',['Flying','Psychic']],
+  ['Burned Tower Embers',['Fire','Ghost']], ['Victory Road Vets',['Rock','Fighting']], ['Cerulean Cave Dwellers',['Psychic','Water']], ['Ruins of Alph',['Psychic','Rock']],
+  ['Whirl Islands',['Water','Flying']], ['Ice Path Walkers',['Ice','Rock']], ['Iron Island Forge',['Steel','Fire']], ['Stark Mountain Magma',['Fire','Rock']]
+];
+
+/* Spread a pool of clubs over a rating range, in a fixed order, and lay out a schedule of n games. */
+function buildTeams(pool, count, lo, hi, seed, styles, ratingList) {
+  const picked = seededShuffle(pool, seed).slice(0, count);
+  const ranks = seededShuffle(picked.map((_, i) => i), seed + 7);
+  const st = styles ? seededShuffle(styles, seed + 13) : null;
+  return picked.map((c, i) => ({
+    name: c[0], types: c[1],
+    rating: ratingList ? ratingList[ranks[i]] : Math.round((lo + (hi - lo) * ranks[i] / Math.max(1, count - 1)) * 10) / 10,
+    style: st ? st[i % st.length] : undefined
+  }));
+}
+function buildSchedule(teams, games, seed) {
+  const list = [];
+  for (let i = 0; i < games; i++) list.push(teams[i % teams.length]);
+  return seededShuffle(list, seed).map((t, i) => ({ name: t.name, types: t.types, rating: t.rating, style: t.style, tag: i + 1 }));
+}
+const ladder = (arr, tagFn) => arr.map((r, i) => ({ name: r[0], rating: r[1], tag: tagFn ? tagFn(i, r) : String(i + 1), types: r[2] || [], style: r[3], bestOf: r[4] }));
+const ordinal = n => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+
+/* ---------- Archetype helper: weights are [DUR, STR, ANC, PLY, AWR, SPD] and add up to 1 ---------- */
+const A = (name, w) => { const [hp, atk, def, spa, spd, spe] = w; return { name, w: { hp, atk, def, spa, spd, spe } }; };
+const slotMaker = (ARCH, BODY, geo, ANAT) => (id, pos, side, imp, traits, key, bonus, group) =>
+  ({ id, pos, side, imp, traits, bonus: bonus || 8, key, group: group || pos, archs: ARCH[key], body: BODY[key], geo: geo || 0, anat: ANAT ? ANAT[key] : null });
+
+/* =====================================================================
+   FOOTBALL
+   ===================================================================== */
+function buildFootball() {
+  const ARCH = {
+    QB:  [A('Gunslinger',[.05,.20,.05,.40,.10,.20]), A('Field General',[.10,.05,.10,.35,.30,.10]), A('Dual Threat',[.10,.20,.05,.25,.05,.35])],
+    RB:  [A('Power Back',[.20,.40,.20,0,.05,.15]), A('Speed Back',[.10,.15,.05,.10,.05,.55])],
+    WR:  [A('Deep Threat',[.05,.15,.05,.20,.05,.50]), A('Possession Receiver',[.10,.20,.10,.15,.30,.15])],
+    TE:  [A('Blocking TE',[.20,.40,.25,0,.10,.05]), A('Receiving TE',[.10,.20,.05,.20,.15,.30])],
+    IOL: [A('Run Blocker',[.25,.40,.25,0,.05,.05]), A('Pass Protector',[.20,.10,.40,.05,.20,.05])],
+    OT:  [A('Run Blocker',[.20,.35,.25,0,.05,.15]), A('Pass Protector',[.15,.10,.35,.05,.15,.20])],
+    DE:  [A('Power Rusher',[.15,.50,.15,0,.10,.10]), A('Speed Rusher',[.10,.20,.05,.10,.05,.50]), A('Edge Setter',[.25,.30,.30,0,.10,.05])],
+    DT:  [A('Run Stuffer',[.30,.20,.40,0,.05,.05]), A('Interior Rusher',[.20,.45,.10,.05,.05,.15])],
+    OLB: [A('Edge Rusher',[.10,.35,.10,.05,.10,.30]), A('Coverage Backer',[.10,.10,.15,.10,.25,.30])],
+    MLB: [A('Run Stopper',[.20,.30,.30,0,.10,.10]), A('Signal Caller',[.15,.15,.20,.10,.30,.10])],
+    CB:  [A('Shutdown Corner',[.05,.10,.15,.05,.25,.40]), A('Ball Hawk',[.10,.10,.10,.15,.30,.25])],
+    FS:  [A('Center Fielder',[.05,.05,.15,.10,.30,.35]), A('Ball Hawk',[.10,.10,.10,.15,.35,.20])],
+    SS:  [A('Box Safety',[.15,.35,.30,0,.10,.10]), A('Coverage Safety',[.10,.10,.15,.10,.25,.30])]
+  };
+  const BODY = {
+    QB:  { w: [35, 80],  h: [45, 95] }, RB:  { w: [25, 65],  h: [15, 60] }, WR:  { w: [15, 60],  h: [35, 85] },
+    TE:  { w: [55, 85],  h: [55, 95] }, OT:  { w: [75, 100], h: [65, 100] }, IOL: { w: [75, 100], h: [40, 90] },
+    DE:  { w: [55, 90],  h: [55, 100] }, DT:  { w: [75, 100], h: [35, 85] }, OLB: { w: [45, 80],  h: [45, 90] },
+    MLB: { w: [55, 85],  h: [40, 85] }, CB:  { w: [10, 55],  h: [25, 75] }, FS:  { w: [20, 60],  h: [30, 80] },
+    SS:  { w: [35, 70],  h: [35, 85] }
+  };
+  const S = slotMaker(ARCH, BODY);
+  const slots = [
+    S('QB','QB','O',3,['ACC'],'QB',10), S('RB','RB','O',1.2,['SPD','PWR'],'RB'),
+    S('WR1','WR','O',1.3,['SPD','ACC'],'WR'), S('WR2','WR','O',1.3,['SPD','ACC'],'WR'), S('WR3','WR','O',1.3,['SPD','ACC'],'WR'),
+    S('TE','TE','O',1,['PWR'],'TE'),
+    S('LT','LT','O',1.1,['WALL','PWR'],'OT',8,'OL'), S('LG','LG','O',1,['WALL','PWR'],'IOL',8,'OL'), S('C','C','O',1,['WALL','PWR'],'IOL',8,'OL'),
+    S('RG','RG','O',1,['WALL','PWR'],'IOL',8,'OL'), S('RT','RT','O',1,['WALL','PWR'],'OT',8,'OL'),
+    S('DE1','DE','D',1.4,['PWR','SPD'],'DE'), S('DT1','DT','D',1.1,['WALL','PWR'],'DT'), S('DT2','DT','D',1.1,['WALL','PWR'],'DT'), S('DE2','DE','D',1.4,['PWR','SPD'],'DE'),
+    S('OLB1','OLB','D',1.1,['PWR','SPD'],'OLB'), S('MLB','MLB','D',1.2,['WALL','PWR'],'MLB'), S('OLB2','OLB','D',1.1,['PWR','SPD'],'OLB'),
+    S('CB1','CB','D',1.4,['SPD','ACC'],'CB'), S('CB2','CB','D',1.4,['SPD','ACC'],'CB'), S('FS','FS','D',1.1,['SPD','ACC'],'FS'), S('SS','SS','D',1,['PWR','SPD'],'SS')
+  ];
+  const opponents = ladder([
+    ['Pewter Boulders',56,['Rock']], ['Cerulean Tidals',59,['Water']], ['Vermilion Voltage',62,['Electric']], ['Celadon Blooms',60,['Grass']],
+    ['Fuchsia Venom',64,['Poison']], ['Saffron Psychics',66,['Psychic']], ['Cinnabar Magma',63,['Fire']], ['Viridian Giants',68,['Ground']],
+    ['Johto Wardens',67,['Steel']], ['Hoenn Stormers',70,['Flying']], ['Sinnoh Frost',69,['Ice']], ['Mt. Silver Titans',72,['Fighting']],
+    ['Lavender Haunts',71,['Ghost']], ['Blackthorn Dragons',74,['Dragon']], ['Goldenrod Charmers',73,['Normal']],
+    ['Elite Four',76,['Dark','Ice']], ['Champion Squad',78,['Dragon','Flying']]
+  ]);
+  const playoffs = ladder([
+    ['Wild Card Round',72,['Normal','Flying']], ['Divisional Round',75,['Rock','Ground']], ['Conference Final',78,['Psychic','Dark']], ['The Championship',81,['Dragon','Fire']]
+  ], (i, r) => ['WC', 'DIV', 'CF', 'CH'][i]);
+  return {
+    key: 'football', name: 'Football', tag: 'Chase 17–0',
+    blurb: '11 a side, offense and defense. Chase 17–0.',
+    labels: { hp:'DUR', atk:'STR', def:'ANC', spa:'PLY', spd:'AWR', spe:'SPD' },
+    names: { hp:'Durability', atk:'Strength', def:'Anchor', spa:'Playmaking', spd:'Awareness', spe:'Speed' },
+    sim: 'binary', scale: 8, pMin: 0.02, pMax: 0.995, scoreWord: 'points', gameWord: 'game', unit: 'week',
+    sideNames: { O: 'Offense', D: 'Defense' }, sideLow: { O: 'offense', D: 'defense' },
+    slots, ARCH, BODY,
+    awardDefs: [{ label: 'Offensive star', test: s => s.side === 'O' }, { label: 'Defensive star', test: s => s.side === 'D' }],
+    modes: {
+      both: { label: 'Full team', sub: '22 spots', sides: ['O','D'], weights: { O: 1, D: 1 }, offset: 0, chemNeed: 10, chemCap: 3 },
+      off:  { label: 'Offense', sub: '11 spots', sides: ['O'], weights: { O: 1 }, offset: 0.8, chemNeed: 8, chemCap: 3 },
+      def:  { label: 'Defense', sub: '11 spots', sides: ['D'], weights: { D: 1 }, offset: 1.0, chemNeed: 8, chemCap: 3 }
+    },
+    verdict(w, g) {
+      if (w === g) return 'Perfect season';
+      if (w >= g - 2) return 'Title favorite';
+      if (w >= g - 5) return 'Playoff lock';
+      if (w >= g - 8) return 'Bubble team';
+      if (w >= g - 11) return 'Rebuilding';
+      return 'Top of the draft board';
+    },
+    formats: {
+      season: {
+        label: 'Season', sub: '17 games and the playoffs', blurb: 'Seventeen games, then the playoffs.',
+        comps: [{
+          id: 'season', name: 'Season', crown: 'Champions',
+          targets: [{ kind: 'perfect', label: '17–0' }],
+          phases: [
+            { kind: 'season', title: 'Regular season', startLabel: 'Play the season', games: opponents, cut: 10, bye: 14, unit: 'week',
+              failText: 'Missed the postseason',
+              sumText: r => r.bye ? 'Top seed, first-round bye' : r.passed ? 'Playoff team' : 'Missed the postseason' },
+            { kind: 'ko', title: 'Playoffs', startLabel: 'Start the playoffs', rounds: playoffs,
+              build: prev => ({ rounds: prev && prev.bye ? playoffs.slice(1) : playoffs }) }
+          ]
+        }]
+      }
+    }
+  };
+}
+
+/* =====================================================================
+   BASKETBALL
+   ===================================================================== */
+function buildBasketball() {
+  const ARCH = {
+    PG:  [A('Floor General',[.10,.05,.10,.25,.35,.15]), A('Scoring Guard',[.05,.10,.05,.40,.15,.25])],
+    SG:  [A('Sharpshooter',[.05,.10,.10,.45,.15,.15]), A('Slasher',[.10,.30,.05,.20,.05,.30])],
+    SF:  [A('Two-Way Wing',[.15,.20,.20,.20,.10,.15]), A('Scorer',[.05,.20,.05,.35,.10,.25])],
+    PF:  [A('Stretch Four',[.10,.15,.10,.35,.15,.15]), A('Bruiser',[.20,.35,.25,0,.10,.10])],
+    C:   [A('Rim Protector',[.20,.20,.40,0,.15,.05]), A('Post Scorer',[.15,.40,.20,.15,.05,.05])],
+    SIX: [A('Instant Offense',[.05,.15,.05,.35,.10,.30]), A('Defensive Spark',[.15,.15,.30,.05,.15,.20])]
+  };
+  const BODY = {
+    PG: { w: [10, 50], h: [15, 60] }, SG: { w: [20, 60], h: [30, 75] }, SF: { w: [30, 70], h: [45, 85] },
+    PF: { w: [55, 90], h: [55, 95] }, C: { w: [75, 100], h: [65, 100] }, SIX: { w: [15, 65], h: [30, 80] }
+  };
+  const S = slotMaker(ARCH, BODY);
+  const slots = [
+    S('PG','PG','S',1.25,['ACC','SPD'],'PG'), S('SG','SG','S',1.1,['ACC','SPD'],'SG'), S('SF','SF','S',1.1,['SPD','PWR'],'SF'),
+    S('PF','PF','S',1,['PWR','WALL'],'PF'), S('C','C','S',1.2,['WALL','PWR'],'C'),
+    S('SIX','6TH','B',0.8,['ACC','SPD'],'SIX',8,'SG')
+  ];
+  const teams = buildTeams(CLUBS, 30, 51, 75, 101);
+  const schedule = buildSchedule(teams, 82, 5);
+  const playoffs = ladder([
+    ['First Round',70,['Water','Poison'],undefined,7], ['Conference Semis',74,['Steel','Ground'],undefined,7],
+    ['Conference Finals',78,['Psychic','Ghost'],undefined,7], ['The Finals',82,['Dragon','Fire'],undefined,7]
+  ], (i) => ['R1', 'R2', 'CF', 'FIN'][i]);
+  return {
+    key: 'basketball', name: 'Basketball', tag: 'Chase 82–0',
+    blurb: 'Five starters and a sixth man. Chase 82–0.',
+    labels: { hp:'STA', atk:'PWR', def:'DEF', spa:'SHT', spd:'IQ', spe:'QCK' },
+    names: { hp:'Stamina', atk:'Power', def:'Defense', spa:'Shooting', spd:'Court IQ', spe:'Quickness' },
+    sim: 'binary', scale: 4.75, pMin: 0.02, pMax: 0.995, scoreWord: 'points', gameWord: 'game', unit: 'game',
+    sideNames: { S: 'Starters', B: 'Sixth man' }, sideLow: { S: 'starting five', B: 'sixth man' },
+    slots, ARCH, BODY,
+    awardDefs: [{ label: 'Best guard', test: s => s.pos === 'PG' || s.pos === 'SG' }, { label: 'Best big', test: s => s.pos === 'PF' || s.pos === 'C' }],
+    modes: {
+      full: { label: 'Starters + 6th man', sub: '6 spots', sides: ['S','B'], weights: { S: 0.87, B: 0.13 }, offset: 0, chemNeed: 8, chemCap: 2.5 },
+      five: { label: 'Starting five', sub: '5 spots', sides: ['S'], weights: { S: 1 }, offset: 0, chemNeed: 7, chemCap: 2 }
+    },
+    verdict(w, g) {
+      if (w === g) return 'Perfect season';
+      if (w >= 74) return 'Record-breaking';
+      if (w >= 65) return 'Title favorite';
+      if (w >= 54) return 'Contender';
+      if (w >= 44) return 'Playoff team';
+      if (w >= 33) return 'Rebuilding';
+      return 'Lottery bound';
+    },
+    formats: {
+      season: {
+        label: 'Season', sub: '82 games and the playoffs', blurb: 'Eighty-two games, then four best-of-seven rounds.',
+        comps: [{
+          id: 'season', name: 'Season', crown: 'NBA-style Champions',
+          targets: [{ kind: 'perfect', label: '82–0' }, { kind: 'atLeast', n: 74, label: '74 or more wins (a new record)' }],
+          phases: [
+            { kind: 'season', title: 'Regular season', startLabel: 'Play the season', games: schedule, cut: 44, bye: 999, unit: 'game',
+              failText: 'Missed the playoffs',
+              sumText: r => r.w >= 62 ? 'Top seed' : r.passed ? 'Playoff team' : 'Missed the playoffs' },
+            { kind: 'ko', title: 'Playoffs', startLabel: 'Start the playoffs', rounds: playoffs }
+          ]
+        }]
+      }
+    }
+  };
+}
+
+/* =====================================================================
+   BASEBALL
+   ===================================================================== */
+function buildBaseball() {
+  const ARCH = {
+    C:   [A('Field General',[.15,.10,.35,.05,.30,.05]), A('Power Catcher',[.15,.35,.25,.05,.15,.05])],
+    B1:  [A('Slugger',[.10,.50,.10,.15,.10,.05]), A('Contact Bat',[.05,.20,.10,.35,.25,.05])],
+    B2:  [A('Table Setter',[.05,.05,.15,.25,.20,.30]), A('Glove-First Infielder',[.05,.10,.40,.10,.20,.15])],
+    B3:  [A('Hot Corner Slugger',[.10,.40,.20,.10,.10,.10]), A('Glove Wizard',[.05,.10,.45,.10,.20,.10])],
+    SS:  [A('Range Merchant',[.05,.10,.35,.10,.15,.25]), A('Offensive Shortstop',[.05,.25,.15,.25,.10,.20])],
+    COF: [A('Power Corner',[.05,.45,.10,.15,.15,.10]), A('Contact Outfielder',[.05,.15,.10,.35,.20,.15])],
+    CF:  [A('Range Center Fielder',[.05,.10,.25,.10,.15,.35]), A('Five-Tool Center Fielder',[.05,.25,.15,.20,.10,.25])],
+    DH:  [A('Masher',[.05,.55,0,.20,.15,.05]), A('On-Base Machine',[.05,.20,0,.35,.35,.05])],
+    SP:  [A('Power Ace',[.25,.30,0,.20,.15,.10]), A('Finesse Starter',[.30,.05,.05,.30,.25,.05])],
+    RP:  [A('Fireballer',[.10,.45,0,.20,.15,.10]), A('Specialist',[.10,.10,.05,.40,.30,.05])],
+    CL:  [A('Lights-Out Closer',[.05,.40,0,.25,.25,.05]), A('Ice-Veined Closer',[.05,.20,0,.35,.35,.05])],
+    SLG: [A('Pure Power',[.05,.60,0,.20,.10,.05]), A('Contact Slugger',[.05,.30,0,.40,.20,.05])]
+  };
+  const BODY = {
+    C: { w: [55, 90], h: [25, 70] }, B1: { w: [60, 100], h: [50, 100] }, B2: { w: [10, 50], h: [15, 60] }, B3: { w: [40, 80], h: [35, 80] },
+    SS: { w: [10, 50], h: [20, 65] }, COF: { w: [30, 75], h: [40, 90] }, CF: { w: [10, 55], h: [30, 80] }, DH: { w: [50, 100], h: [40, 100] },
+    SP: { w: [35, 85], h: [50, 100] }, RP: { w: [30, 80], h: [35, 90] }, CL: { w: [40, 90], h: [40, 95] }, SLG: { w: [55, 100], h: [40, 100] }
+  };
+  const S = slotMaker(ARCH, BODY);
+  const slots = [
+    S('C','C','H',1.1,['WALL','ACC'],'C'), S('1B','1B','H',1,['PWR'],'B1'), S('2B','2B','H',1,['SPD','ACC'],'B2'), S('3B','3B','H',1,['PWR','WALL'],'B3'),
+    S('SS','SS','H',1.15,['SPD','ACC'],'SS'), S('LF','LF','H',1,['PWR','ACC'],'COF',8,'OF'), S('CF','CF','H',1.1,['SPD'],'CF'),
+    S('RF','RF','H',1,['PWR','ACC'],'COF',8,'OF'), S('DH','DH','H',1,['PWR','ACC'],'DH'),
+    S('SP1','SP','P',1.3,['ACC','PWR'],'SP'),
+    S('RP','RP','R',0.7,['ACC','PWR'],'RP'), S('CL','CL','R',1,['ACC','PWR'],'CL')
+  ];
+  const derbySlots = [1, 2, 3, 4].map(i => S('SL' + i, 'SLG', 'X', 1, ['PWR', 'ACC'], 'SLG', 8));
+  const teams = buildTeams(CLUBS, 30, 53, 77, 303);
+  const schedule = buildSchedule(teams, 162, 9);
+  const playoffs = ladder([
+    ['Wild Card Series',69,['Normal','Flying'],undefined,3], ['Division Series',73,['Rock','Ground'],undefined,5],
+    ['League Championship',76,['Psychic','Dark'],undefined,7], ['The World Series',79,['Dragon','Fire'],undefined,7]
+  ], (i) => ['WC', 'DS', 'LCS', 'WS'][i]);
+  const derbyRounds = ladder([
+    ['Quarter-final',71,[]], ['Semi-final',77,[]], ['The Final',83,[]]
+  ], (i) => ['QF', 'SF', 'F'][i]);
+  derbyRounds[0].name = 'Quarter-final vs Cinnabar Magma'; derbyRounds[1].name = 'Semi-final vs Mt. Silver Titans'; derbyRounds[2].name = 'The Final vs Blackthorn Dragons';
+  return {
+    key: 'baseball', name: 'Baseball', tag: 'Season or Derby',
+    blurb: 'Lineup, starter and bullpen. Chase 116 wins, or swing for the Derby.',
+    labels: { hp:'STA', atk:'PWR', def:'GLV', spa:'CTL', spd:'EYE', spe:'SPD' },
+    names: { hp:'Stamina', atk:'Power', def:'Glove', spa:'Control', spd:'Pitch IQ', spe:'Speed' },
+    sim: 'binary', scale: 20, pMin: 0.25, pMax: 0.78, scoreWord: 'runs', gameWord: 'game', unit: 'game',
+    sideNames: { H: 'Lineup', P: 'Starter', R: 'Bullpen', X: 'Derby squad' }, sideLow: { H: 'lineup', P: 'starter', R: 'bullpen', X: 'derby squad' },
+    slots, ARCH, BODY,
+    awardDefs: [{ label: 'Silver Slugger', test: s => s.side === 'H' }, { label: 'Cy Young', test: s => s.side === 'P' || s.side === 'R' }],
+    modes: {
+      full: { label: 'Full team', sub: '12 spots', sides: ['H','P','R'], weights: { H: 0.5, P: 0.38, R: 0.12 }, offset: 0, chemNeed: 12, chemCap: 3 },
+      bat:  { label: 'Lineup', sub: '9 spots', sides: ['H'], weights: { H: 1 }, offset: -0.8, chemNeed: 8, chemCap: 2 },
+      arm:  { label: 'Pitching staff', sub: '3 spots', sides: ['P','R'], weights: { P: 0.76, R: 0.24 }, offset: 1.5, chemNeed: 7, chemCap: 2 }
+    },
+    verdict(w, g) {
+      if (w >= 116) return 'Record-breaking';
+      if (w >= 105) return 'Dynasty';
+      if (w >= 95) return 'Division winner';
+      if (w >= 88) return 'Wild card team';
+      if (w >= 75) return 'Fringe contender';
+      return 'Rebuilding';
+    },
+    formats: {
+      season: {
+        label: 'Season', sub: '162 games and the October run', blurb: 'A 162-game season, then four rounds of series.',
+        comps: [{
+          id: 'season', name: 'Season', crown: 'World Series Champions',
+          targets: [{ kind: 'atLeast', n: 116, label: '116 or more wins (the record)' }],
+          phases: [
+            { kind: 'season', title: 'Regular season', startLabel: 'Play the season', games: schedule, cut: 88, bye: 100, unit: 'game',
+              failText: 'Missed the postseason',
+              sumText: r => r.bye ? 'Division winner, first-round bye' : r.passed ? 'Wild card team' : 'Missed the postseason' },
+            { kind: 'ko', title: 'Postseason', startLabel: 'Start the postseason', rounds: playoffs,
+              build: prev => ({ rounds: prev && prev.bye ? playoffs.slice(1) : playoffs }) }
+          ]
+        }]
+      },
+      derby: {
+        label: 'Home Run Derby', sub: '4 sluggers, 3 rounds', blurb: 'Four sluggers, three head-to-head rounds. Most home runs wins.',
+        sim: 'derby', slots: derbySlots,
+        modes: { derby: { label: 'Derby squad', sub: '4 spots', sides: ['X'], weights: { X: 1 }, offset: 0, chemNeed: 99, chemCap: 0 } },
+        comps: [{
+          id: 'derby', name: 'Derby', crown: 'Home Run Derby Champion',
+          targets: [{ kind: 'title', label: 'winning the Derby' }],
+          phases: [{ kind: 'ko', title: 'The Derby', startLabel: 'Step up to the plate', rounds: derbyRounds }]
+        }]
+      }
+    }
+  };
+}
+
+const SOCCER_GEO = 0.6;   // how much a weak key stat drags a soccer grade (0 = plain weighted average)
+const EURO_PLACES = 4;    // league finish needed for the European Cup
+
+/* =====================================================================
+   SOCCER
+   ===================================================================== */
+function buildSoccer() {
+  /* Roles are sharp on purpose: each position leans hard on its own stats, and a weak key stat hurts (see `geo`). */
+  const ARCH = {
+    GK: [A('Shot Stopper',[.10,.05,.40,0,.35,.10]), A('Sweeper Keeper',[.10,.05,.25,.10,.30,.20])],
+    CB: [A('Stopper',[.20,.30,.45,0,.05,0]), A('Ball-Playing Defender',[.10,.05,.35,.15,.30,.05])],
+    FB: [A('Attacking Full-Back',[.20,.05,.20,.10,.10,.35]), A('Defensive Full-Back',[.20,.10,.40,0,.15,.15])],
+    WB: [A('Marauding Wing-Back',[.30,.05,.15,.10,.05,.35]), A('Defensive Wing-Back',[.25,.10,.35,0,.10,.20])],
+    DM: [A('Anchor',[.20,.15,.40,0,.20,.05]), A('Deep Playmaker',[.15,0,.20,.25,.35,.05])],
+    CM: [A('Box-to-Box',[.35,.15,.15,.10,.10,.15]), A('Playmaker',[.10,0,.10,.35,.40,.05])],
+    AM: [A('Number Ten',[0,0,0,.45,.40,.15]), A('Shadow Striker',[.05,.20,0,.35,.15,.25])],
+    W:  [A('Inside Forward',[.05,.10,0,.40,.10,.35]), A('Touchline Winger',[.10,.05,0,.15,.05,.65])],
+    WM: [A('Work-Rate Wide Mid',[.30,.10,.15,.15,.05,.25]), A('Crossing Wide Mid',[.15,.05,.05,.30,.20,.25])],
+    ST: [A('Poacher',[.05,.15,0,.45,.20,.15]), A('Target Man',[.20,.50,.10,.15,.05,0]), A('Pacey Forward',[.05,.20,0,.20,.05,.50])]
+  };
+  const BODY = {
+    GK: { w: [50, 95], h: [60, 100] }, CB: { w: [65, 100], h: [55, 100] }, FB: { w: [15, 60], h: [25, 75] }, WB: { w: [15, 60], h: [25, 75] },
+    DM: { w: [45, 85], h: [40, 85] }, CM: { w: [30, 70], h: [30, 75] }, AM: { w: [15, 60], h: [25, 70] }, W: { w: [10, 50], h: [20, 65] },
+    WM: { w: [20, 65], h: [25, 75] }, ST: { w: [35, 85], h: [40, 95] }
+  };
+  /* Anatomy decides who suits a position: hands for the goalkeeper, legs for the wide players, no limbs and no outfield. */
+  const ANAT = {
+    GK: { H: 20, F: -3, N: 0 }, CB: { H: 3, L: 3, N: -8 }, FB: { L: 8, F: 5, N: -10 }, WB: { L: 8, F: 5, N: -10 },
+    DM: { H: 4, L: 2, N: -8 }, CM: { L: 4, H: 2, N: -8 }, AM: { L: 3, H: 3, N: -6 }, W: { L: 9, F: 5, N: -12 },
+    WM: { L: 7, F: 4, N: -10 }, ST: { L: 5, H: 3, F: 2, N: -10 }
+  };
+  const S = slotMaker(ARCH, BODY, SOCCER_GEO, ANAT);
+  const gk = () => S('GK','GK','G',1,['WALL','ACC'],'GK');
+  const cb = (n, id) => S(id || 'CB' + n,'CB','D',1.1,['WALL','PWR'],'CB');
+  const fb = (id, pos) => S(id,pos,'D',1,['SPD','ACC'],'FB',8,'FB');
+  const wb = (id, pos) => S(id,pos,'M',1,['SPD'],'WB',8,'FB');
+  const dm = id => S(id,'DM','M',1,['WALL','PWR'],'DM');
+  const cm = id => S(id,'CM','M',1,['ACC','SPD'],'CM');
+  const am = (id, side) => S(id,'AM',side || 'M',1.1,['ACC'],'AM');
+  const wing = (id, pos, side, imp) => S(id,pos,side || 'A',imp || 1.1,['SPD','ACC'],'W',8,'W');
+  const wm = (id, pos) => S(id,pos,'M',1,['SPD','ACC'],'WM',8,'W');
+  const st = id => S(id,'ST','A',1.3,['ACC','PWR'],'ST');
+  const formations = {
+    f433: { label: '4-3-3', sub: 'Wide forwards, one holding mid', weights: { A: 0.30, M: 0.28, D: 0.32, G: 0.10 },
+      slots: [gk(), fb('LB','LB'), cb(1), cb(2), fb('RB','RB'), dm('DM'), cm('CM1'), cm('CM2'), wing('LW','LW'), st('ST'), wing('RW','RW')] },
+    f442: { label: '4-4-2', sub: 'Two strikers, flat midfield', weights: { A: 0.28, M: 0.30, D: 0.32, G: 0.10 },
+      slots: [gk(), fb('LB','LB'), cb(1), cb(2), fb('RB','RB'), wm('LM','LM'), cm('CM1'), cm('CM2'), wm('RM','RM'), st('ST1'), st('ST2')] },
+    f352: { label: '3-5-2', sub: 'Three centre-backs, wing-backs', weights: { A: 0.26, M: 0.38, D: 0.26, G: 0.10 },
+      slots: [gk(), cb(1), cb(2), cb(3), wb('LWB','LWB'), dm('DM'), cm('CM'), am('AM'), wb('RWB','RWB'), st('ST1'), st('ST2')] },
+    f4231: { label: '4-2-3-1', sub: 'Double pivot, a number ten', weights: { A: 0.38, M: 0.20, D: 0.32, G: 0.10 },
+      slots: [gk(), fb('LB','LB'), cb(1), cb(2), fb('RB','RB'), dm('DM1'), dm('DM2'), wing('LW','LW'), am('AM','A'), wing('RW','RW'), st('ST')] },
+    f532: { label: '5-3-2', sub: 'Five at the back, two up top', weights: { A: 0.24, M: 0.26, D: 0.40, G: 0.10 },
+      slots: [gk(), S('LWB','LWB','D',1,['SPD'],'WB',8,'FB'), cb(1), cb(2), cb(3), S('RWB','RWB','D',1,['SPD'],'WB',8,'FB'), dm('DM'), cm('CM1'), cm('CM2'), st('ST1'), st('ST2')] }
+  };
+  const styleMix = ['poss','poss','poss','poss','poss','poss','poss','press','press','press','press','counter','counter','counter','counter','direct','direct','direct','direct'];
+  const leagueTeams = buildTeams(CLUBS, 19, 0, 0, 211, styleMix, [50,52,54,55,57,58,59,61,62,63,64,66,68,70,73,75,77,79,81]);
+  const leagueSchedule = buildSchedule(leagueTeams.concat(leagueTeams), 38, 17);
+  const cupRounds = ladder([
+    ['Third Round: Rustboro Quarry',56,['Rock','Ground'],'direct'], ['Fourth Round: Petalburg Woods',61,['Grass','Bug'],'poss'],
+    ['Fifth Round: Dewford Surf',66,['Water','Fighting'],'press'], ['Quarter-final: Mossdeep Seers',71,['Psychic','Steel'],'counter'],
+    ['Semi-final: Sootopolis Deep',76,['Water','Dragon'],'poss'], ['Cup Final: Blackthorn Dragons',80,['Dragon'],'press']
+  ], (i) => ['R3', 'R4', 'R5', 'QF', 'SF', 'F'][i]);
+  const euroGroupTeams = [
+    { name: 'Safari Zone Wanderers', types: ['Normal','Grass'], rating: 63, style: 'direct' },
+    { name: 'Sevii Sharks', types: ['Water','Dark'], rating: 68, style: 'press' },
+    { name: 'Mt. Coronet Summit', types: ['Rock','Ice'], rating: 73, style: 'counter' }
+  ];
+  const euroGroupGames = [];
+  [0, 1, 2, 0, 1, 2].forEach((ti, i) => { const t = euroGroupTeams[ti]; euroGroupGames.push({ name: t.name, types: t.types, rating: t.rating, style: t.style, tag: 'G' + (i + 1) }); });
+  const euroRounds = ladder([
+    ['Round of 16: Frontier Brains',70,['Fighting','Normal'],'poss'], ['Quarter-final: Tin Tower Chimes',75,['Flying','Psychic'],'press'],
+    ['Semi-final: Spear Pillar Sentinels',79,['Dragon','Psychic'],'counter'], ['The Final: Distortion Wraiths',82,['Ghost','Dragon'],'poss']
+  ], (i) => ['R16', 'QF', 'SF', 'F'][i]);
+  const leagueComp = {
+    id: 'league', name: 'League', crown: 'League Champions',
+    targets: [{ kind: 'unbeaten', label: 'an unbeaten season' }, { kind: 'title', comp: 'league', label: 'winning the league' }],
+    phases: [{
+      kind: 'season', title: 'League season', startLabel: 'Kick off the season', games: leagueSchedule, unit: 'match', table: { teams: leagueTeams, title: true },
+      failText: 'Missed out on the title',
+      sumText: r => r.rank === 1 ? 'League champions, and into the European Cup' : r.rank <= EURO_PLACES ? 'Finished ' + ordinal(r.rank) + ' and qualified for the European Cup' : 'Finished ' + ordinal(r.rank) + ', no European football'
+    }]
+  };
+  const cupComp = {
+    id: 'cup', name: 'Domestic Cup', crown: 'Domestic Cup Winners',
+    targets: [{ kind: 'title', comp: 'cup', label: 'winning the cup' }],
+    phases: [{ kind: 'ko', title: 'Domestic Cup', startLabel: 'Start the cup run', rounds: cupRounds }]
+  };
+  const euroComp = {
+    id: 'euro', name: 'European Cup', crown: 'European Champions',
+    qualify: run => { const l = run.done.find(d => d.comp === 'league'); return !l || l.rank <= EURO_PLACES; },
+    targets: [{ kind: 'title', comp: 'euro', label: 'winning the European Cup' }],
+    phases: [
+      { kind: 'season', title: 'Group stage', startLabel: 'Play the group stage', games: euroGroupGames, unit: 'match',
+        table: { teams: euroGroupTeams, advance: 2 }, failText: 'Knocked out in the group stage',
+        sumText: r => r.passed ? (r.rank === 1 ? 'Group winners' : 'Through as runners-up') : 'Knocked out in the group stage' },
+      { kind: 'ko', title: 'Knockout rounds', startLabel: 'Start the knockouts', rounds: euroRounds }
+    ]
+  };
+  return {
+    key: 'soccer', name: 'Soccer', tag: 'League, cups, Europe',
+    blurb: 'Pick a formation, then play a full season: the league, the domestic cup, and the European Cup if you finish in the top four.',
+    labels: { hp:'STA', atk:'STR', def:'DEF', spa:'TEC', spd:'VIS', spe:'PAC' },
+    names: { hp:'Stamina', atk:'Strength', def:'Defending', spa:'Technique', spd:'Vision', spe:'Pace' },
+    sim: 'goals', baseGoals: 1.3, gscale: 18, scoreWord: 'goals', gameWord: 'match', unit: 'match',
+    sideNames: { A: 'Attack', M: 'Midfield', D: 'Defence', G: 'Goalkeeper' }, sideLow: { A: 'attack', M: 'midfield', D: 'defence', G: 'goalkeeper' },
+    ARCH, BODY, formations, defaultFormation: 'f433',
+    awardDefs: [{ label: 'Golden Boot', test: s => s.side === 'A' || s.pos === 'ST' }, { label: 'Playmaker', test: s => s.side === 'M' && s.pos !== 'LWB' && s.pos !== 'RWB' }, { label: 'Golden Glove', test: s => s.side === 'G' }],
+    modes: { xi: { label: 'Starting XI', sub: '11 spots', sides: ['A','M','D','G'], weights: null, offset: -4, chemNeed: 9, chemCap: 3 } },
+    plans: {
+      bal: { label: 'Balanced', blurb: 'No edge, no risk' },
+      press: { label: 'High press', blurb: 'Beats possession sides' },
+      poss: { label: 'Possession', blurb: 'Beats counter-attackers' },
+      counter: { label: 'Counter-attack', blurb: 'Beats pressing sides' }
+    },
+    styleNames: { press: 'Pressing', poss: 'Possession', counter: 'Counter-attacking', direct: 'Direct' },
+    verdict(w, g) { return ''; },
+    formats: {
+      season: { label: 'Season', sub: 'League, cup and Europe', blurb: 'A 38-match league season, then the domestic cup, then the European Cup if you finish in the top four. Win all three for the Treble.', comps: [leagueComp, cupComp, euroComp] }
+    }
+  };
+}
+
+const SPORTS = { football: buildFootball(), basketball: buildBasketball(), soccer: buildSoccer(), baseball: buildBaseball() };
+const SPORT_ORDER = ['football', 'basketball', 'soccer', 'baseball'];
+
+/* ---------- Context: which sport, competition, squad and formation are in play ---------- */
+const CUR = { sportKey: 'football', fmtKey: 'season', mode: 'both', formation: null };
+function setCtx(o) {
+  const next = Object.assign({}, CUR, o);
+  const sp = SPORTS[next.sportKey] || SPORTS.football;
+  next.sportKey = sp.key;
+  if (!sp.formats[next.fmtKey]) next.fmtKey = Object.keys(sp.formats)[0];
+  const f = sp.formats[next.fmtKey];
+  const ms = f.modes || sp.modes;
+  if (!ms[next.mode]) next.mode = Object.keys(ms)[0];
+  if (sp.formations) { if (!sp.formations[next.formation]) next.formation = sp.defaultFormation; } else next.formation = null;
+  Object.assign(CUR, next);
+}
+const SP = () => SPORTS[CUR.sportKey];
+const FMT = () => SP().formats[CUR.fmtKey];
+const MODESET = () => FMT().modes || SP().modes;
+const MODE = () => MODESET()[CUR.mode];
+function allSlots() {
+  const f = FMT(), sp = SP();
+  return f.slots || (sp.formations ? sp.formations[CUR.formation].slots : sp.slots);
+}
+function activeSlots() { const sides = MODE().sides; return allSlots().filter(s => sides.includes(s.side)); }
+function sideWeights() {
+  const sp = SP(), m = MODE();
+  if (m.weights) return m.weights;
+  return sp.formations ? sp.formations[CUR.formation].weights : {};
+}
+setCtx({});
+
+/* ---------- Size: percentiles within the whole pool ---------- */
+const SIZE_KW = 0.35, SIZE_KH = 0.12, SIZE_MAX = 24;
+const outside = (v, [lo, hi]) => v < lo ? lo - v : v > hi ? v - hi : 0;
+function sizePenalty(mon, slot) {
+  const b = slot.body;
+  return Math.min(SIZE_MAX, SIZE_KW * outside(mon.wPct, b.w) + SIZE_KH * outside(mon.hPct, b.h));
+}
+
+/* Grade a Pokémon at a spot: its best archetype, plus a trait bonus when its ability suits the position. */
+function fit(mon, slot) {
+  let base = -1, arch = null;
+  const g = slot.geo || 0;
+  for (const a of slot.archs) {
+    let v = 0, lnv = 0;
+    for (const k of STAT_KEYS) {
+      const x = Math.min(1, mon.stats[k] / NORM);
+      v += a.w[k] * x;
+      if (g && a.w[k]) lnv += a.w[k] * Math.log(Math.max(0.12, x));
+    }
+    v *= 100;
+    if (g) v = (1 - g) * v + g * Math.exp(lnv) * 100;
+    if (v > base) { base = v; arch = a; }
+  }
+  const trait = TRAIT_OF[mon.ability] || null;
+  const bonus = trait && slot.traits.includes(trait) ? slot.bonus : 0;
+  let anat = 0; const anatTags = [];
+  if (slot.anat) {
+    let up = 0;
+    for (const tg of mon.anat) { const v = slot.anat[tg]; if (v > 0) { up += v; anatTags.push([tg, v]); } else if (v < 0) { anat += v; anatTags.push([tg, v]); } }
+    anat += Math.min(22, up);
+  }
+  const pen = sizePenalty(mon, slot);
+  return { score: Math.max(0, Math.min(100, base + bonus + anat - pen)), base, bonus, anat, anatTags, pen, trait, arch: arch.name, archW: arch.w };
+}
+function archNames(slot) { return slot.archs.map(a => a.name).join(' / '); }
+/* The stats a position leans on most, for the "needs" line on empty spots. */
+function slotNeeds(slot) {
+  const tot = {};
+  for (const a of slot.archs) for (const k of STAT_KEYS) tot[k] = Math.max(tot[k] || 0, a.w[k]);
+  return STAT_KEYS.filter(k => tot[k] >= 0.2).sort((p, q) => tot[q] - tot[p]).slice(0, 3);
+}
+function rows(lineup) {
+  return allSlots().filter(s => lineup[s.id]).map(s => ({ slot: s, mon: lineup[s.id], f: fit(lineup[s.id], s) }));
+}
+function sideRating(lineup, side) {
+  let t = 0, w = 0;
+  for (const r of rows(lineup)) if (r.slot.side === side) { t += r.f.score * r.slot.imp; w += r.slot.imp; }
+  return w ? t / w : 0;
+}
+function chemistry(lineup) {
+  const set = new Set();
+  Object.values(lineup).forEach(m => m.types.forEach(t => set.add(t)));
+  const m = MODE();
+  return Math.max(0, Math.min(m.chemCap, (set.size - m.chemNeed) * 0.5));
+}
+function teamRating(lineup) {
+  const m = MODE(), w = sideWeights(), sides = {};
+  let num = 0, den = 0;
+  for (const s of m.sides) { sides[s] = sideRating(lineup, s); const wt = w[s] === undefined ? 1 : w[s]; num += wt * sides[s]; den += wt; }
+  const chem = chemistry(lineup);
+  return { sides, chem, mode: CUR.mode, overall: (den ? num / den : 0) + chem + m.offset };
+}
+
+/* ---------- Type matchups ---------- */
+const MATCH_K = 12;       // rating points per unit of average matchup edge
+const MATCH_BASE = 0.12;  // the edge a typical Pokémon already has, so an average lineup nets about zero
+function matchupAdj(lineup, opp) {
+  if (!opp || !opp.length) return 0;
+  let t = 0, w = 0;
+  for (const r of rows(lineup)) { t += monEdge(r.mon, opp) * r.slot.imp; w += r.slot.imp; }
+  return w ? Math.max(-8, Math.min(8, (t / w - MATCH_BASE) * MATCH_K)) : 0;
+}
+
+/* ---------- Game plans (soccer): press beats possession, possession beats counter, counter beats press ---------- */
+const PLAN_K = 3.5;
+const BEATS = { press: 'poss', poss: 'counter', counter: 'press' };
+function planAdj(plan, style) {
+  if (!SP().plans || !plan || plan === 'bal' || !style) return 0;
+  if (BEATS[plan] === style) return PLAN_K;
+  if (BEATS[style] === plan) return -PLAN_K;
+  return 0;
+}
+function bestPlanFor(style) {
+  if (!SP().plans) return null;
+  for (const k of ['press', 'poss', 'counter']) if (BEATS[k] === style) return k;
+  return 'bal';
+}
+function bestSeasonPlan(def) {
+  if (!SP().plans) return null;
+  let best = 'bal', bv = 0;
+  for (const k of ['press', 'poss', 'counter']) {
+    const v = def.games.reduce((a, g) => a + planAdj(k, g.style), 0);
+    if (v > bv) { bv = v; best = k; }
+  }
+  return best;
+}
+function planTally(def, plan) {
+  let fav = 0, exp = 0;
+  for (const g of def.games) { const a = planAdj(plan, g.style); if (a > 0) fav++; else if (a < 0) exp++; }
+  return { fav, exp };
+}
+
+/* ---------- Probability and simulation ---------- */
+function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function poisson(l) {
+  if (l > 40) return Math.max(0, Math.round(l + Math.sqrt(l) * gauss()));
+  const L = Math.exp(-l); let k = 0, p = 1;
+  do { k++; p *= Math.random(); } while (p > L);
+  return k - 1;
+}
+function pmf(l, n) { const a = [Math.exp(-l)]; for (let i = 1; i <= n; i++) a.push(a[i - 1] * l / i); return a; }
+function wdl(l1, l2, n) {
+  const a = pmf(l1, n), b = pmf(l2, n);
+  let w = 0, d = 0, l = 0;
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) { const p = a[i] * b[j]; if (i > j) w += p; else if (i === j) d += p; else l += p; }
+  return { w, d, l };
+}
+const comb = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+function seriesProb(p, need) {
+  let s = 0;
+  for (let k = 0; k < need; k++) s += comb(need - 1 + k, k) * Math.pow(p, need) * Math.pow(1 - p, k);
+  return s;
+}
+const simKind = () => FMT().sim || SP().sim;
+function logistic(diff) { const sp = SP(); return Math.max(sp.pMin, Math.min(sp.pMax, 1 / (1 + Math.exp(-diff / sp.scale)))); }
+function goalLambdas(diff) { const sp = SP(); return [sp.baseGoals * Math.exp(diff / sp.gscale), sp.baseGoals * Math.exp(-diff / sp.gscale)]; }
+const penWin = diff => 0.5 + 0.12 * Math.tanh(diff / 15);
+const DERBY = { base: 28, k: 0.5 };
+const derbyLam = r => Math.max(3, (r - DERBY.base) * DERBY.k);
+
+/* Outcome probabilities for one fixture. `ko` means a draw cannot stand (penalties in soccer). */
+function probsFor(myR, g, ko) {
+  const kind = simKind(), diff = myR - g.rating;
+  if (kind === 'goals') {
+    const [a, b] = goalLambdas(diff), o = wdl(a, b, 16);
+    return { w: o.w, d: o.d, l: o.l, adv: ko ? o.w + o.d * penWin(diff) : o.w };
+  }
+  if (kind === 'derby') {
+    const o = wdl(derbyLam(myR), derbyLam(g.rating), 100), adv = o.w + o.d * 0.5;
+    return { w: adv, d: 0, l: 1 - adv, adv };
+  }
+  const p = logistic(diff);
+  if (g.bestOf) { const adv = seriesProb(p, Math.ceil(g.bestOf / 2)); return { w: adv, d: 0, l: 1 - adv, adv, p }; }
+  return { w: p, d: 0, l: 1 - p, adv: p, p };
+}
+const SCORERS = {
+  football(gap) { const lo = 10 + Math.floor(Math.random() * 18); return [lo + Math.min(38, 1 + Math.round(Math.abs(gauss()) * 7 + Math.max(0, gap) * 0.12)), lo]; },
+  basketball(gap) { const lo = 92 + Math.floor(Math.random() * 24); return [lo + Math.min(40, 1 + Math.round(Math.abs(gauss()) * 7 + Math.max(0, gap) * 0.25)), lo]; },
+  baseball(gap) { const lo = Math.floor(Math.pow(Math.random(), 1.6) * 6); return [lo + Math.min(12, 1 + Math.floor(Math.abs(gauss()) * 1.3 + Math.max(0, gap) * 0.04)), lo]; }
+};
+function playRaw(myR, g, ko) {
+  const kind = simKind(), diff = myR - g.rating, pr = probsFor(myR, g, ko);
+  if (kind === 'goals') {
+    const [a, b] = goalLambdas(diff);
+    const pf = poisson(a), pa = poisson(b);
+    let res = pf > pa ? 'W' : pf < pa ? 'L' : 'D', note = '';
+    if (ko && res === 'D') { res = Math.random() < penWin(diff) ? 'W' : 'L'; note = 'pens'; }
+    return { res, pf, pa, note, p: pr.w, pd: pr.d, adv: pr.adv };
+  }
+  if (kind === 'derby') {
+    let pf = poisson(derbyLam(myR)), pa = poisson(derbyLam(g.rating)), note = '';
+    while (pf === pa) { pf += poisson(3); pa += poisson(3); note = 'swing-off'; }
+    return { res: pf > pa ? 'W' : 'L', pf, pa, note, p: pr.w, pd: 0, adv: pr.adv };
+  }
+  if (g.bestOf) {
+    const need = Math.ceil(g.bestOf / 2);
+    let sw = 0, sl = 0;
+    while (sw < need && sl < need) { if (Math.random() < pr.p) sw++; else sl++; }
+    return { res: sw > sl ? 'W' : 'L', pf: sw, pa: sl, series: g.bestOf, p: pr.w, pd: 0, adv: pr.adv };
+  }
+  const win = Math.random() < pr.p;
+  const [wp, lp] = SCORERS[CUR.sportKey](win ? diff : -diff);
+  return { res: win ? 'W' : 'L', pf: win ? wp : lp, pa: win ? lp : wp, p: pr.w, pd: 0, adv: pr.adv };
+}
+function playGame(lineup, rating, g, plan, ko) {
+  const adj = matchupAdj(lineup, g.types), padj = planAdj(plan, g.style);
+  const r = playRaw(rating + adj + padj, g, ko);
+  return Object.assign({ name: g.name, tag: g.tag, opp: g.rating, types: g.types || [], style: g.style, bestOf: g.bestOf, adj, padj, win: r.res === 'W' }, r);
+}
+
+/* ---------- Seasons, tables and knockout phases ---------- */
+function buildTable(others, my) {
+  const rows = others.map(o => ({ name: o.name, rating: o.rating, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }));
+  const apply = (r, f, a) => { r.gf += f; r.ga += a; if (f > a) { r.w++; r.pts += 3; } else if (f === a) { r.d++; r.pts += 1; } else r.l++; };
+  for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) for (let k = 0; k < 2; k++) {
+    const [a, b] = goalLambdas(rows[i].rating - rows[j].rating), x = poisson(a), y = poisson(b);
+    apply(rows[i], x, y); apply(rows[j], y, x);
+  }
+  rows.push({ name: 'Your squad', me: true, w: my.w, d: my.d, l: my.l, gf: my.pf, ga: my.pa, pts: my.pts });
+  rows.sort((p, q) => q.pts - p.pts || (q.gf - q.ga) - (p.gf - p.ga) || q.gf - p.gf);
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  return rows;
+}
+function runSeason(def, lineup, t, plan) {
+  const games = def.games.map(g => playGame(lineup, t.overall, g, plan, false));
+  const w = games.filter(g => g.res === 'W').length, d = games.filter(g => g.res === 'D').length, l = games.filter(g => g.res === 'L').length;
+  const pf = games.reduce((a, g) => a + g.pf, 0), pa = games.reduce((a, g) => a + g.pa, 0);
+  const res = { kind: 'season', def, games, w, d, l, pf, pa, pts: 3 * w + d, plan, bye: def.bye ? w >= def.bye : false };
+  if (def.table) {
+    res.table = buildTable(def.table.teams, res);
+    res.rank = res.table.find(r => r.me).rank;
+    res.passed = def.table.advance ? res.rank <= def.table.advance : true;
+    res.won = !!def.table.title && res.rank === 1;
+  } else {
+    res.passed = def.cut ? w >= def.cut : true;
+    res.won = false;
+  }
+  return res;
+}
+const resolveDef = (p, prev) => Object.assign({}, p, p.build ? p.build(prev) : {});
+function playKo(def, lineup, t, plan) {
+  const games = [];
+  let ok = true;
+  for (const rd of def.rounds) { const g = playGame(lineup, t.overall, rd, plan === 'auto' ? bestPlanFor(rd.style) : plan, true); games.push(g); if (!g.win) { ok = false; break; } }
+  return { kind: 'ko', def, games, passed: ok, won: ok };
+}
+/* Play the phases of one competition, optionally continuing from results already in hand. */
+function simComp(comp, lineup, t, plan, prefix) {
+  const done = (prefix || []).slice();
+  for (let pi = done.length; pi < comp.phases.length; pi++) {
+    const last = done[done.length - 1];
+    if (last && !last.passed) break;
+    const def = resolveDef(comp.phases[pi], last);
+    done.push(def.kind === 'season' ? runSeason(def, lineup, t, plan === 'auto' ? bestSeasonPlan(def) : plan) : playKo(def, lineup, t, plan));
+  }
+  return done;
+}
+const compWon = (comp, done) => done.length === comp.phases.length && !!done[done.length - 1].won;
+
+/* ---------- A run through the chosen competition, driven one step at a time by the UI ---------- */
+function nextPhase(run) {
+  for (const comp of FMT().comps) {
+    const mine = run.done.filter(d => d.comp === comp.id);
+    if (mine.length >= comp.phases.length) continue;
+    if (mine.some(d => !d.passed)) continue;
+    if (!mine.length && comp.qualify && !comp.qualify(run)) continue;
+    const p = comp.phases[mine.length];
+    return { comp, index: mine.length, def: resolveDef(p, mine[mine.length - 1]) };
+  }
+  return null;
+}
+function newRun(lineup) {
+  const t = teamRating(lineup);
+  const run = { t, aw: awards(lineup), done: [], ko: null, cur: null, stage: 'break', odds: null };
+  run.cur = nextPhase(run);
+  return run;
+}
+function advanceRun(run) { run.cur = nextPhase(run); run.stage = run.cur ? 'break' : 'final'; }
+function playSeasonStep(run, lineup, plan) {
+  const c = run.cur;
+  const res = runSeason(c.def, lineup, run.t, plan === 'auto' ? bestSeasonPlan(c.def) : plan);
+  res.comp = c.comp.id;
+  run.done.push(res);
+  advanceRun(run);
+  return res;
+}
+function startKo(run) { run.ko = { def: run.cur.def, games: [] }; run.stage = 'ko'; }
+function playKoStep(run, lineup, plan) {
+  const ko = run.ko, rd = ko.def.rounds[ko.games.length];
+  const g = playGame(lineup, run.t.overall, rd, plan === 'auto' ? bestPlanFor(rd.style) : plan, true);
+  ko.games.push(g);
+  if (!g.win || ko.games.length === ko.def.rounds.length) {
+    run.done.push({ kind: 'ko', def: ko.def, games: ko.games, passed: g.win, won: g.win, comp: run.cur.comp.id });
+    run.ko = null;
+    advanceRun(run);
+  }
+  return g;
+}
+/* Everything at once: used by tests and by "sim the rest". */
+function simRun(lineup, plan) {
+  const run = newRun(lineup);
+  while (run.cur) {
+    if (run.cur.def.kind === 'season') playSeasonStep(run, lineup, plan === 'auto' ? bestSeasonPlan(run.cur.def) : plan);
+    else { startKo(run); while (run.ko) playKoStep(run, lineup, plan === 'auto' ? bestPlanFor(run.ko.def.rounds[run.ko.games.length].style) : plan); }
+  }
+  return run;
+}
+function compResults(run) { return FMT().comps.map(c => ({ comp: c, done: run.done.filter(d => d.comp === c.id) })); }
+function trophyCount(run) { return compResults(run).filter(x => compWon(x.comp, x.done)).length; }
+
+/* ---------- Odds ---------- */
+function gameP(lineup, t, g, plan, ko) {
+  return probsFor(t.overall + matchupAdj(lineup, g.types) + planAdj(plan, g.style), g, ko);
+}
+function winsAtLeast(ps, n) {
+  let dist = [1];
+  for (const p of ps) {
+    const nx = new Array(dist.length + 1).fill(0);
+    for (let k = 0; k < dist.length; k++) { nx[k] += dist[k] * (1 - p); nx[k + 1] += dist[k] * p; }
+    dist = nx;
+  }
+  return dist.slice(n).reduce((a, b) => a + b, 0);
+}
+function koChainOdds(lineup, t, rounds, plan) {
+  return rounds.reduce((a, rd) => a * gameP(lineup, t, rd, plan, true).adv, 1);
+}
+function mcTitle(comp, lineup, t, prefix, n) {
+  let c = 0;
+  for (let i = 0; i < n; i++) if (compWon(comp, simComp(comp, lineup, t, 'bal', prefix))) c++;
+  return c / n;
+}
+/* Title odds for a competition, optionally from a point partway through it. */
+function compOdds(comp, lineup, t, prefix) {
+  const mine = prefix || [];
+  if (comp.phases.every(p => p.kind === 'ko') && !mine.length) {
+    return koChainOdds(lineup, t, resolveDef(comp.phases[0]).rounds, 'bal');
+  }
+  if (mine.length && comp.phases.slice(mine.length).every(p => p.kind === 'ko') && mine[mine.length - 1].passed) {
+    return koChainOdds(lineup, t, resolveDef(comp.phases[mine.length], mine[mine.length - 1]).rounds, 'bal');
+  }
+  return mcTitle(comp, lineup, t, mine, 500);
+}
+function targetOdds(lineup, t) {
+  const out = [];
+  for (const comp of FMT().comps) for (const tg of comp.targets || []) {
+    const games = comp.phases[0].games;
+    let p;
+    if (tg.kind === 'perfect') p = games.reduce((a, g) => a * gameP(lineup, t, g, 'bal', false).w, 1);
+    else if (tg.kind === 'unbeaten') p = games.reduce((a, g) => { const o = gameP(lineup, t, g, 'bal', false); return a * (o.w + o.d); }, 1);
+    else if (tg.kind === 'atLeast') p = winsAtLeast(games.map(g => gameP(lineup, t, g, 'bal', false).w), tg.n);
+    else p = compOdds(comp, lineup, t, []);
+    out.push({ label: tg.label, p, comp: comp.id });
+  }
+  return out;
+}
+
+/* ---------- Awards and recap ---------- */
+function awards(lineup) {
+  const ms = MODE().sides;
+  const rs = rows(lineup).filter(r => ms.includes(r.slot.side));
+  const val = r => r.f.score + (r.slot.imp - 1) * 8;
+  const top = list => list.length ? list.slice().sort((a, b) => val(b) - val(a))[0] : null;
+  const out = { mvp: top(rs), extra: [], weak: rs.slice().sort((a, b) => a.f.score - b.f.score)[0] };
+  for (const d of SP().awardDefs) {
+    const sub = rs.filter(r => d.test(r.slot));
+    if (sub.length && sub.length < rs.length) out.extra.push({ label: d.label, r: top(sub) });
+  }
+  return out;
+}
+const stripThe = s => s.replace(/^The /, '');
+const oppName = n => stripThe(n.indexOf(': ') > -1 ? n.split(': ')[1] : n.indexOf(' vs ') > -1 ? n.split(' vs ')[1] : n);
+const roundName = n => stripThe(n.split(': ')[0].split(' vs ')[0]);
+const plural = (n, w, pl) => n + ' ' + (n === 1 ? w : (pl || w + 's'));
+function koExitName(res) { return roundName(res.games[res.games.length - 1].name); }
+function headline(run) {
+  const sp = SP(), cr = compResults(run);
+  if (cr.length > 1) {
+    const n = trophyCount(run);
+    return n === cr.length ? 'The Treble' : n ? n + ' of ' + cr.length + ' trophies' : 'Empty-handed';
+  }
+  const { comp, done } = cr[0], first = done[0];
+  if (compWon(comp, done)) {
+    if (first.kind === 'season' && !first.def.table && first.l === 0) return 'Perfect season and a title';
+    if (first.kind === 'season' && first.def.table && first.l === 0) return 'Invincible ' + comp.crown.toLowerCase();
+    return comp.crown;
+  }
+  const last = done[done.length - 1];
+  if (last.kind === 'ko') return 'Out in the ' + koExitName(last);
+  if (last.def.table && last.def.table.title) return last.l === 0 ? 'Unbeaten, but no title' : 'Finished ' + ordinal(last.rank);
+  if (!last.passed) return last.def.failText;
+  return comp.name;
+}
+function recap(lineup, run) {
+  const sp = SP(), rd = x => Math.round(x), sg = x => (x >= 0 ? '+' : '') + x.toFixed(1);
+  const aw = run.aw, lines = [];
+  const seasons = run.done.filter(d => d.kind === 'season');
+  const prim = seasons[0];
+  if (prim) {
+    if (prim.def.table) {
+      lines.push(`${prim.def.title}: ${plural(prim.w, 'win')}, ${plural(prim.d, 'draw')} and ${plural(prim.l, 'loss', 'losses')} for ${prim.pts} points, finishing ${ordinal(prim.rank)}.`);
+    } else {
+      lines.push(`${prim.w}–${prim.l} in the ${prim.def.title.toLowerCase()}, scoring ${prim.pf} ${sp.scoreWord} and allowing ${prim.pa}.`);
+    }
+  }
+  lines.push(`${aw.mvp.mon.name} was the team MVP, playing ${aw.mvp.f.arch} at ${aw.mvp.slot.pos} with a grade of ${rd(aw.mvp.f.score)}.`);
+  const all = run.done.flatMap(d => d.games);
+  const byAdj = all.filter(g => g.types && g.types.length).sort((a, b) => b.adj - a.adj);
+  if (byAdj.length) {
+    const best = byAdj[0], worst = byAdj[byAdj.length - 1];
+    lines.push(best.adj < 0.5 && worst.adj > -0.5 ? 'Type matchups barely moved the needle.' : `Best type matchup: ${oppName(best.name)} (${sg(best.adj)}). Toughest: ${oppName(worst.name)} (${sg(worst.adj)}).`);
+  }
+  const sideKeys = MODE().sides;
+  if (sideKeys.length > 1) {
+    const srt = sideKeys.slice().sort((a, b) => run.t.sides[b] - run.t.sides[a]);
+    const hi = srt[0], lo = srt[srt.length - 1], gap = run.t.sides[hi] - run.t.sides[lo];
+    if (gap >= 4) lines.push(`The ${sp.sideLow[hi]} carried this team, while the ${sp.sideLow[lo]} lagged behind.`);
+    else lines.push(sideKeys.length === 2 ? `The ${sp.sideLow[sideKeys[0]]} and the ${sp.sideLow[sideKeys[1]]} were evenly matched.` : 'Every unit pulled its weight.');
+  }
+  if (prim) {
+    const wins = prim.games.filter(g => g.res === 'W').sort((a, b) => (b.pf - b.pa) - (a.pf - a.pa));
+    const losses = prim.games.filter(g => g.res === 'L').sort((a, b) => (b.pa - b.pf) - (a.pa - a.pf));
+    if (wins[0]) lines.push(`Biggest win: ${wins[0].pf}–${wins[0].pa} over ${oppName(wins[0].name)}.`);
+    lines.push(losses[0] ? `Worst loss: ${losses[0].pf}–${losses[0].pa} to ${oppName(losses[0].name)}.` : `No ${sp.gameWord === 'match' ? 'league' : 'regular-season'} losses.`);
+  }
+  lines.push(`The weak spot was ${aw.weak.mon.name} at ${aw.weak.slot.pos}, graded ${rd(aw.weak.f.score)}.`);
+  for (const d of run.done) {
+    if (d.kind === 'ko') {
+      const last = d.games[d.games.length - 1];
+      if (d.won) lines.push(`${d.def.title}: won all ${d.games.length} ${d.def.rounds[0].bestOf ? 'series' : 'rounds'} and lifted the trophy.`);
+      else lines.push(`${d.def.title}: ended with a ${last.pf}–${last.pa} ${last.series ? 'series defeat' : 'loss'} in the ${koExitName(d)}${last.note === 'pens' ? ' on penalties' : ''}.`);
+    } else if (d.def.table && d.def.table.advance) {
+      lines.push(`${d.def.title}: ${d.passed ? 'finished ' + ordinal(d.rank) + ' and went through' : 'finished ' + ordinal(d.rank) + ' and went out'}.`);
+    } else if (!d.passed && d.def.cut) lines.push(`They needed ${d.def.cut} wins to make the ${sp.key === 'baseball' ? 'postseason' : 'playoffs'}.`);
+  }
+  return { headline: headline(run), lines };
+}
+
+/* ---------- Scouting ---------- */
+function uniqueOpponents() {
+  const seen = new Map();
+  for (const c of FMT().comps) for (const p of c.phases) {
+    const list = p.kind === 'season' ? p.games : resolveDef(p).rounds;
+    for (const g of list) if (!seen.has(g.name) && g.types && g.types.length) seen.set(g.name, g);
+  }
+  return [...seen.values()];
+}
+function scheduleEdge(mon) {
+  const list = uniqueOpponents();
+  return list.length ? list.reduce((a, o) => a + monEdge(mon, o.types), 0) / list.length : 0;
+}
+
+/* ---------- Picks ---------- */
+function topPositions(mon, slots, n) {
+  const best = {};
+  for (const s of slots) {
+    const f = fit(mon, s);
+    if (!best[s.group] || f.score > best[s.group].score) best[s.group] = { pos: s.pos, score: f.score, arch: f.arch };
+  }
+  return Object.values(best).sort((a, b) => b.score - a.score).slice(0, n || 3);
+}
+/* Random rolls come from a seeded stream inside a draft room, so everyone in the room sees the same rolls. */
+let ROLLR = null;
+const rnd = () => (ROLLR || Math.random)();
+function hashSeed(str) { let h = 2166136261 >>> 0; for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+function setRollSeed(room, n) { ROLLR = room ? rng(hashSeed(String(room).toUpperCase() + ':' + n)) : null; }
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+const ALL_TYPES = Object.keys(TYPE_COLOR);
+function rollType(taken) {
+  const counts = {};
+  MONS.filter(m => !taken.has(m.name)).forEach(m => m.types.forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const start = Math.floor(rnd() * ALL_TYPES.length);
+  for (let i = 0; i < ALL_TYPES.length; i++) { const t = ALL_TYPES[(start + i) % ALL_TYPES.length]; if (counts[t] >= 3) return t; }
+  return ALL_TYPES[0];
+}
+function candidatesFor(type, taken) {
+  return shuffle(MONS.filter(m => m.types.includes(type))).filter(m => !taken.has(m.name)).slice(0, 6);
+}
+function legendCandidates(taken) {
+  return shuffle(LEGENDS).filter(m => !taken.has(m.name)).slice(0, 6);
+}
+
+/* ---------- Playing friends without a server: squad codes, then a league or a series from pasted codes ---------- */
+const POOL = MONS.concat(LEGENDS);
+const POOL_IDX = new Map(POOL.map((m, i) => [m.name, i]));
+const cleanName = n => (String(n || '').replace(/[^A-Za-z0-9 _-]/g, '').trim().slice(0, 14).trim()) || 'Squad';
+const cleanRoom = r => String(r || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+function newRoomCode() {
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 5; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+function withCtx(ctx, fn) {
+  const saved = Object.assign({}, CUR);
+  setCtx(ctx);
+  try { return fn(); } finally { setCtx(saved); }
+}
+const ctxOf = () => ({ sportKey: CUR.sportKey, fmtKey: CUR.fmtKey, mode: CUR.mode, formation: CUR.formation });
+
+/* A code is plain text, so it pastes anywhere: DL1.sport.competition.squad.formation.name.pokemon-ids */
+function encodeSquad(name, ctx, lineup) {
+  return withCtx(ctx, () => {
+    const ids = activeSlots().map(s => POOL_IDX.get(lineup[s.id].name).toString(36).padStart(2, '0')).join('');
+    return ['DL1', CUR.sportKey, CUR.fmtKey, CUR.mode, CUR.formation || '-', cleanName(name).replace(/ /g, '_'), ids].join('.');
+  });
+}
+function decodeSquad(code) {
+  const bad = { error: 'That does not look like a squad code.' };
+  try {
+    const parts = String(code).trim().split('.');
+    if (parts.length !== 7 || parts[0] !== 'DL1') return bad;
+    const [, sportKey, fmtKey, mode, form, nm, ids] = parts;
+    if (!SPORTS[sportKey]) return bad;
+    return withCtx({ sportKey, fmtKey, mode, formation: form === '-' ? null : form }, () => {
+      if (CUR.sportKey !== sportKey || CUR.fmtKey !== fmtKey || CUR.mode !== mode || (CUR.formation || '-') !== form) return bad;
+      const slots = activeSlots();
+      if (ids.length !== slots.length * 2) return { error: 'That code is for a different squad size.' };
+      const lineup = {};
+      for (let i = 0; i < slots.length; i++) {
+        const m = POOL[parseInt(ids.slice(i * 2, i * 2 + 2), 36)];
+        if (!m) return { error: 'That code looks damaged.' };
+        lineup[slots[i].id] = m;
+      }
+      return { name: nm.replace(/_/g, ' ') || 'Squad', ctx: ctxOf(), lineup, t: teamRating(lineup), key: sportKey + '|' + fmtKey, code: String(code).trim() };
+    });
+  } catch (e) { return bad; }
+}
+
+/* Type edge between two whole squads, from A's side: each Pokémon against each opposing Pokémon. */
+const PAIR_BASE = 0.2;
+function pairAdj(A, B) {
+  return withCtx(A.ctx, () => {
+    const rs = rows(A.lineup).filter(r => MODE().sides.includes(r.slot.side)), bm = Object.values(B.lineup);
+    let t = 0, w = 0;
+    for (const r of rs) { let e = 0; for (const m of bm) e += monEdge(r.mon, m.types); t += (e / bm.length) * r.slot.imp; w += r.slot.imp; }
+    return w ? Math.max(-8, Math.min(8, (t / w - PAIR_BASE) * MATCH_K)) : 0;
+  });
+}
+function versusGame(A, B, ko) {
+  const ra = A.t.overall + pairAdj(A, B), rb = B.t.overall + pairAdj(B, A);
+  const r = withCtx(A.ctx, () => playRaw(ra, { rating: rb }, ko));
+  return Object.assign({ ra, rb, win: r.res === 'W' }, r);
+}
+const DUEL_BO = { football: 3, basketball: 7, soccer: 3, baseball: 7 };
+const duelBestOf = ctx => (ctx.sportKey === 'baseball' && ctx.fmtKey === 'derby') ? 1 : DUEL_BO[ctx.sportKey];
+function versusSeries(A, B) {
+  const bo = duelBestOf(A.ctx), need = Math.ceil(bo / 2), games = [];
+  let wa = 0, wb = 0;
+  while (wa < need && wb < need) { const g = versusGame(A, B, true); games.push(g); if (g.res === 'W') wa++; else wb++; }
+  return { bo, games, wa, wb, winner: wa > wb ? A : B, loser: wa > wb ? B : A };
+}
+/* Everyone plays everyone home and away; the top two meet in a final. */
+function versusLeague(squads) {
+  const pts = squads[0].ctx.sportKey === 'soccer';
+  const tab = squads.map((s, i) => ({ i, s, name: s.name, w: 0, d: 0, l: 0, pf: 0, pa: 0, pts: 0 }));
+  const fixtures = [];
+  for (let i = 0; i < squads.length; i++) for (let j = 0; j < squads.length; j++) {
+    if (i === j) continue;
+    const g = versusGame(squads[i], squads[j], false);
+    const a = tab[i], b = tab[j];
+    a.pf += g.pf; a.pa += g.pa; b.pf += g.pa; b.pa += g.pf;
+    if (g.res === 'W') { a.w++; b.l++; a.pts += pts ? 3 : 1; }
+    else if (g.res === 'L') { b.w++; a.l++; b.pts += pts ? 3 : 1; }
+    else { a.d++; b.d++; a.pts++; b.pts++; }
+    fixtures.push({ home: squads[i].name, away: squads[j].name, res: g.res, pf: g.pf, pa: g.pa });
+  }
+  tab.sort((p, q) => q.pts - p.pts || (q.pf - q.pa) - (p.pf - p.pa) || q.pf - p.pf);
+  tab.forEach((r, k) => { r.rank = k + 1; });
+  const final = tab.length >= 3 ? versusSeries(tab[0].s, tab[1].s) : null;
+  return { tab, fixtures, final, pts };
+}
+function versusDuel(A, B) { return { final: versusSeries(A, B), duel: true }; }
+function versusText(res, squads) {
+  const sp = SPORTS[squads[0].ctx.sportKey], lines = [];
+  const score = f => Math.max(f.wa, f.wb) + '-' + Math.min(f.wa, f.wb);
+  if (res.duel) {
+    lines.push(`Dex League duel · ${sp.name}${res.final.bo > 1 ? ' · best of ' + res.final.bo : ''}`);
+    lines.push(`${res.final.winner.name} beat ${res.final.loser.name} ${score(res.final)}`);
+    return lines.join('\n');
+  }
+  lines.push(`Dex League friends league · ${sp.name}`);
+  res.tab.forEach(r => lines.push(`${r.rank}. ${r.name}  ${sp.key === 'soccer' ? `${r.w}-${r.d}-${r.l}, ${r.pts} pts` : `${r.w}-${r.l}`}`));
+  if (res.final) lines.push(`Final: ${res.final.winner.name} beat ${res.final.loser.name} ${score(res.final)}`);
+  return lines.join('\n');
+}
+
+/*END CORE*/
+
+/*UI*/
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const state = { sportKey: 'football', fmtKey: 'season', mode: 'both', formation: null, lineup: {}, roll: null, sel: null, legendLeft: 1, gods: false, run: null, room: '', myName: '', view: 'draft', vs: { squads: [], res: null, msg: '' } };
+
+function applyCtx(patch) {
+  Object.assign(state, patch);
+  setCtx({ sportKey: state.sportKey, fmtKey: state.fmtKey, mode: state.mode, formation: state.formation });
+  state.sportKey = CUR.sportKey; state.fmtKey = CUR.fmtKey; state.mode = CUR.mode; state.formation = CUR.formation;
+}
+const total = () => activeSlots().length;
+const takenSet = () => new Set(Object.values(state.lineup).map(m => m.name));
+const filledCount = () => Object.keys(state.lineup).length;
+const openSlots = () => activeSlots().filter(s => !state.lineup[s.id]);
+const fmtPct = p => p < 0.001 ? 'under 0.1%' : p < 0.1 ? (p * 100).toFixed(1) + '%' : Math.round(p * 100) + '%';
+const sgn = x => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1);
+const tdot = t => `<span class="tdot"><i style="background:${TYPE_COLOR[t]}"></i>${t}</span>`;
+const legendKey = () => STAT_KEYS.map(k => `${SP().labels[k]} ${SP().names[k].toLowerCase()}`).join(' · ');
+
+function typePill(t) { return `<span class="tp"><i style="background:${TYPE_COLOR[t]}"></i>${t}</span>`; }
+function statBars(m) {
+  const sp = SP();
+  return `<span class="stats">${STAT_KEYS.map(k => `<span class="st" title="${sp.names[k]}"><span>${sp.labels[k]}</span><span class="bar"><i style="width:${Math.min(100, m.stats[k] / NORM * 100)}%"></i></span><em>${m.stats[k]}</em></span>`).join('')}</span>`;
+}
+function recsHtml(m) {
+  const tops = topPositions(m, openSlots(), 3), se = scheduleEdge(m);
+  const edge = uniqueOpponents().length ? `<span class="rec" title="Average type matchup across the schedule"><small>vs schedule</small><em class="edge ${se > 0.1 ? 'up' : se < -0.1 ? 'dn' : ''}">${sgn(se)}</em></span>` : '';
+  return `<span class="recs"><small>Best at</small>${tops.map((t, i) => `<span class="rec ${i === 0 ? 'top' : ''}" title="${t.arch}"><b>${t.pos}</b><em>${Math.round(t.score)}</em>${i === 0 ? `<span>${t.arch}</span>` : ''}</span>`).join('')}${edge}</span>`;
+}
+function traitLine(m) {
+  const t = TRAIT_OF[m.ability];
+  const body = SP().key === 'soccer' ? ' · ' + (m.anat ? [...m.anat].map(c => ANAT_NAME[c]).join(' + ') : 'plain build') : '';
+  return (t ? `${esc(m.ability)} · <b>${TRAIT_NAME[t]} trait</b>` : esc(m.ability)) + body;
+}
+
+/* ---------- Setup: sport, competition, formation, squad ---------- */
+function optBtn(action, attr, val, label, sub, on) {
+  return `<button class="mode" data-action="${action}" data-${attr}="${val}" aria-pressed="${on}"><b>${esc(label)}</b><small>${esc(sub)}</small></button>`;
+}
+function setupPicker() {
+  if (filledCount()) return '';
+  const sp = SP(), f = FMT();
+  let h = `<div class="setup"><div><p class="eyebrow">Sport</p><div class="opts" role="group" aria-label="Choose a sport">${SPORT_ORDER.map(k => optBtn('sport', 'sport', k, SPORTS[k].name, SPORTS[k].tag, state.sportKey === k)).join('')}</div></div>`;
+  const fk = Object.keys(sp.formats);
+  if (fk.length > 1) h += `<div><p class="eyebrow">Competition</p><div class="opts" role="group" aria-label="Choose a competition">${fk.map(k => optBtn('format', 'fmt', k, sp.formats[k].label, sp.formats[k].sub, state.fmtKey === k)).join('')}</div></div>`;
+  if (sp.formations) h += `<div><p class="eyebrow">Formation</p><div class="opts" role="group" aria-label="Choose a formation">${Object.keys(sp.formations).map(k => optBtn('formation', 'form', k, sp.formations[k].label, sp.formations[k].sub, state.formation === k)).join('')}</div></div>`;
+  const mk = Object.keys(MODESET());
+  if (mk.length > 1) h += `<div><p class="eyebrow">Your squad</p><div class="opts" role="group" aria-label="Choose your squad">${mk.map(k => optBtn('mode', 'mode', k, MODESET()[k].label, MODESET()[k].sub, state.mode === k)).join('')}</div></div>`;
+  h += `<div><p class="eyebrow">Pool</p><div class="opts" role="group" aria-label="Choose the Pokémon pool">${optBtn('pool', 'pool', 'std', 'Normal draft', 'Roll a type, pick one of six', !state.gods)}${optBtn('pool', 'pool', 'gods', 'All legendaries', 'God squad: 29 legends only', state.gods)}</div></div>`;
+  h += `<div><p class="eyebrow">Draft room (optional)</p><div class="roomrow"><input id="roomInput" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="Room code" aria-label="Draft room code" value="${esc(state.room)}"><button class="ghost" data-action="newRoom">New room</button>${state.room ? '<button class="ghost" data-action="copyInvite" id="inviteBtn">Copy invite</button>' : ''}</div><p class="hint">Friends who use the same room code get the same rolls in the same order, so you can compare squads fairly.</p></div>`;
+  h += `<p class="hint">${esc(sp.blurb)} ${esc(f.blurb)}${sp.plans ? ' Before each stage you also pick a game plan: pressing beats possession sides, possession beats counter-attackers, and counter-attacking beats pressing sides.' : ''}</p></div>`;
+  return h;
+}
+
+function renderRoll() {
+  const el = $('#rollPanel');
+  if (state.run) { el.innerHTML = ''; return; }
+  if (filledCount() === total()) {
+    const first = FMT().comps[0].phases[0];
+    el.innerHTML = `<div class="panel"><h2>Lineup locked</h2><p class="hint">All ${total()} spots are filled. Time to play, or share your squad first.</p><button class="btn" data-action="sim">${esc(first.startLabel)}</button>${shareBlock()}</div>`;
+    return;
+  }
+  const r = state.roll;
+  if (!r) {
+    el.innerHTML = `<div class="panel">${setupPicker()}<h2>Next pick</h2>
+      <p class="hint">${state.gods ? 'God squad: every roll shows six legendaries. Pick one, then choose which spot it plays.' : 'Roll a type to see six Pokémon of that type. Pick one, then choose which spot it plays. You also get one legendary roll to use whenever you like.'}</p>
+      <p class="legend">${legendKey()}</p>
+      <div class="btnrow">${state.gods ? '<button class="btn" data-action="legend">Roll six legends</button>' : `<button class="btn" data-action="roll">Roll a type</button>
+      <button class="btn alt" data-action="legend" ${state.legendLeft ? '' : 'disabled'}>Legendary roll · ${state.legendLeft} left</button>`}</div></div>`;
+    return;
+  }
+  let html = `<div class="panel"><h2>${r.legend ? 'Legends' : 'Rolled ' + typePill(r.type)}</h2>
+    <p class="hint">${r.legend ? 'Pick any one legendary for any open spot.' : 'Tap a Pokémon to see how it grades at each open spot.'}</p>
+    <p class="legend">${legendKey()}</p>
+    <div class="cands">${r.cands.map((m, i) => `<button class="cand" style="animation-delay:${i * 40}ms" data-action="pick" data-i="${i}" aria-pressed="${state.sel === i}">
+      <span class="cand-head">${av(m)}<span class="nm">${esc(m.name)}</span><span class="types">${m.types.map(typePill).join('')}</span></span>
+      <span class="ab">${traitLine(m)}</span>${recsHtml(m)}${statBars(m)}</button>`).join('')}</div>`;
+  if (state.sel !== null) {
+    const m = r.cands[state.sel];
+    const list = openSlots().map(s => ({ s, f: fit(m, s) })).sort((a, b) => b.f.score - a.f.score);
+    html += `<div class="picker" id="picker"><h3>Place ${esc(m.name)}</h3><div class="slotgrid">${list.map(({ s, f }, idx) =>
+      `<button class="slotbtn ${idx === 0 ? 'best' : ''}" data-action="place" data-slot="${s.id}">
+        <span class="pos">${s.pos}</span><span class="sc">${Math.round(f.score)}</span>
+        <span class="bar"><i style="width:${f.score}%"></i></span>
+        <span class="need">${f.arch}${f.bonus ? `<span class="chip">+${f.bonus} ${TRAIT_NAME[f.trait]}</span>` : ''}${f.anatTags.map(([tg, v]) => `<span class="chip ${v < 0 ? 'neg' : ''}">${v > 0 ? '+' : '−'}${Math.abs(v)} ${ANAT_NAME[tg]}</span>`).join('')}${f.pen >= 1 ? `<span class="chip neg">−${Math.round(f.pen)} size</span>` : ''}</span></button>`).join('')}</div></div>`;
+  }
+  el.innerHTML = html + '</div>';
+}
+
+
+/* ---------- Pictures and formation boards ---------- */
+const spriteId = n => n.toLowerCase().replace(/[^a-z0-9]/g, '');
+const SPRITE_URL = n => 'https://play.pokemonshowdown.com/sprites/gen5/' + spriteId(n) + '.png';
+const initials = n => n.replace(/[^A-Za-z]/g, '').slice(0, 2);
+/* A round portrait. The picture sits over the initials and swaps in only if it loads, so offline pages still look right. */
+const av = (m, label) => `<span class="av" style="--tc:${TYPE_COLOR[m.types[0]]}"><b class="ini">${esc(label || initials(m.name))}</b><img src="${SPRITE_URL(m.name)}" alt="" loading="lazy" referrerpolicy="no-referrer" draggable="false"></span>`;
+document.addEventListener('load', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.parentNode.classList.contains('av')) t.parentNode.classList.add('ok'); }, true);
+document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.parentNode.classList.contains('av')) t.style.display = 'none'; }, true);
+
+/* x and y are percentages of the board, attackers at the top. */
+const LAYOUT = {
+  'soccer|f433': { ST:[50,10], LW:[16,20], RW:[84,20], CM1:[30,42], CM2:[70,42], DM:[50,58], LB:[11,72], CB1:[36,78], CB2:[64,78], RB:[89,72], GK:[50,92] },
+  'soccer|f442': { ST1:[36,10], ST2:[64,10], LM:[11,40], CM1:[36,44], CM2:[64,44], RM:[89,40], LB:[11,70], CB1:[36,76], CB2:[64,76], RB:[89,70], GK:[50,92] },
+  'soccer|f352': { ST1:[36,10], ST2:[64,10], AM:[50,30], LWB:[10,48], CM:[50,47], RWB:[90,48], DM:[50,64], CB1:[24,77], CB2:[50,82], CB3:[76,77], GK:[50,94] },
+  'soccer|f4231': { ST:[50,9], LW:[15,27], AM:[50,28], RW:[85,27], DM1:[34,50], DM2:[66,50], LB:[11,70], CB1:[36,77], CB2:[64,77], RB:[89,70], GK:[50,92] },
+  'soccer|f532': { ST1:[36,10], ST2:[64,10], CM1:[30,34], CM2:[70,34], DM:[50,52], LWB:[9,54], RWB:[91,54], CB1:[24,76], CB2:[50,81], CB3:[76,76], GK:[50,93] },
+  'football|O': { WR1:[7,45], LT:[27,45], LG:[38,45], C:[49,45], RG:[60,45], RT:[71,45], TE:[82,45], WR2:[93,45], WR3:[18,58], QB:[50,67], RB:[50,85] },
+  'football|D': { DE1:[25,26], DT1:[42,26], DT2:[58,26], DE2:[75,26], OLB1:[32,47], MLB:[50,50], OLB2:[68,47], CB1:[10,44], CB2:[90,44], SS:[30,76], FS:[70,76] },
+  'basketball|all': { PG:[39,22], SG:[13,44], SF:[65,44], PF:[20,68], C:[58,70], SIX:[88,50] },
+  'baseball|H': { CF:[50,10], LF:[14,24], RF:[86,24], SS:[36,48], '2B':[64,48], '3B':[16,64], '1B':[84,64], DH:[88,90], C:[50,90] },
+  'baseball|P': { SP1:[50,50] },
+  'baseball|R': { RP:[36,50], CL:[64,50] },
+  'baseball|X': { SL1:[12,50], SL2:[37,50], SL3:[63,50], SL4:[88,50] }
+};
+const BOARD_H = { soccer: 118, football: 96, basketball: 84, baseball: 90 };
+function boardFor(key, slots, label, h) {
+  const lay = LAYOUT[key];
+  const n = slots.length;
+  const pos = s => lay && lay[s.id] ? lay[s.id] : (() => { const i = slots.indexOf(s), per = Math.min(5, n), r = Math.floor(i / per), c = i % per, inRow = Math.min(per, n - r * per); return [(c + 0.5) / inRow * 100, 22 + r * 30]; })();
+  const done = slots.filter(s => state.lineup[s.id]).length;
+  const nodes = slots.map(s => {
+    const [x, y] = pos(s), m = state.lineup[s.id];
+    const st = `left:${x}%;top:${y}%`;
+    if (!m) {
+      const can = state.sel !== null && state.roll;
+      return `<${can ? 'button data-action="place" data-slot="' + s.id + '"' : 'div'} class="node open ${can ? 'can' : ''}" style="${st}"><span class="av"><b class="pos">${esc(s.pos)}</b></span></${can ? 'button' : 'div'}>`;
+    }
+    const f = fit(m, s);
+    return `<div class="node" style="${st}">${av(m, s.pos)}<span class="sc">${Math.round(f.score)}</span><span class="nl">${esc(m.name)}</span></div>`;
+  }).join('');
+  return `<div class="side"><h2>${label}<span>${done}/${n}</span></h2><div class="board b-${key.split('|')[0]}${key === 'baseball|H' ? ' diamond' : ''}" style="aspect-ratio:100/${h}">${key === 'basketball|all' && slots.some(x => x.id === 'SIX') ? '<div class="benchbox"><span>Bench</span></div>' : ''}${nodes}</div></div>`;
+}
+
+function renderLineup() {
+  const el = $('#lineup'), sp = SP(), key0 = state.sportKey;
+  const all = allSlots();
+  const one = state.sportKey === 'soccer' ? 'soccer|' + state.formation : (state.sportKey === 'basketball' ? 'basketball|all' : null);
+  if (one && LAYOUT[one]) { el.innerHTML = boardFor(one, all, sp.name === 'Soccer' ? 'Starting XI' : 'Starting five and bench', BOARD_H[key0]); return; }
+  el.innerHTML = MODE().sides.map(code => {
+    const slots = all.filter(s => s.side === code);
+    const h = key0 === 'baseball' ? (code === 'H' ? 90 : 30) : key0 === 'football' ? 96 : 40;
+    return boardFor(key0 + '|' + code, slots, sp.sideNames[code], h);
+  }).join('');
+}
+
+/* ---------- Scouting panel ---------- */
+let schedKey = '';
+function renderSchedule() {
+  const key = state.sportKey + '|' + state.fmtKey;
+  if (key === schedKey) return;
+  schedKey = key;
+  const sp = SP(), f = FMT();
+  const row = (g, tag) => `<li class="wk plain"><span class="n">${tag}</span><span class="gm"><span>${esc(g.name)}</span><span class="gsub">${(g.types || []).map(tdot).join('')}${g.style ? `<span>${sp.styleNames[g.style]}</span>` : ''}${g.bestOf ? `<span>Best of ${g.bestOf}</span>` : ''}</span></span></li>`;
+  const sections = [];
+  for (const c of f.comps) for (const p of c.phases) {
+    let list;
+    if (p.kind === 'season') {
+      const seen = new Map();
+      p.games.forEach(g => { const e = seen.get(g.name); if (e) e.n++; else seen.set(g.name, { g, n: 1 }); });
+      list = [...seen.values()].map(({ g, n }) => row(g, n > 1 ? '×' + n : '·')).join('');
+    } else list = resolveDef(p).rounds.map(g => row(g, g.tag)).join('');
+    sections.push(`<h3 class="sub">${f.comps.length > 1 ? esc(c.name) + ' · ' : ''}${esc(p.title)}</h3><ul class="weeks">${list}</ul>`);
+  }
+  const typed = uniqueOpponents().length > 0;
+  $('#schedule').innerHTML = `<details class="panel sched"><summary>Scout the schedule</summary>
+    <p class="hint">${typed ? 'Every opponent has a type. Pokémon that hit that type hard and resist its attacks give your team an edge in that game, worth up to about 8 rating points.' : 'Three head-to-head rounds. Your sluggers’ grades decide how many home runs you hit.'}${sp.plans ? ' Opponents also have a playing style: press beats possession, possession beats counter-attacking, counter-attacking beats press. Direct teams are neutral.' : ''}</p>
+    ${sections.join('')}</details>`;
+}
+
+/* ---------- Results ---------- */
+const recordText = r => (SP().key === 'soccer') ? `${r.w}–${r.d}–${r.l}` : `${r.w}–${r.l}`;
+function awardCard(label, x) {
+  return `<div class="award"><small>${label}</small><b>${esc(x.mon.name)}</b><span>${x.slot.pos} · ${x.f.arch} · ${Math.round(x.f.score)}</span></div>`;
+}
+function awardsHtml(aw) {
+  return `<div class="awards">${awardCard('Team MVP', aw.mvp)}${aw.extra.map(e => awardCard(e.label, e.r)).join('')}${awardCard('Weakest link', aw.weak)}</div>`;
+}
+function gameRow(g, i) {
+  const sp = SP(), cls = g.adj > 0.4 ? 'up' : g.adj < -0.4 ? 'dn' : '';
+  const sub = [];
+  if (g.types.length) sub.push(g.types.map(tdot).join(''), `<i class="edge ${cls}">${sgn(g.adj)} edge</i>`);
+  if (g.style) sub.push(`<span>${sp.styleNames[g.style]}</span>`);
+  if (g.padj) sub.push(`<i class="edge ${g.padj > 0 ? 'up' : 'dn'}">${sgn(g.padj)} plan</i>`);
+  if (g.bestOf) sub.push(`<span>Best of ${g.bestOf}</span>`);
+  const score = `${g.pf}–${g.pa}${g.note === 'pens' ? ' pens' : g.note === 'swing-off' ? ' swing-off' : ''}`;
+  return `<li class="wk" style="animation-delay:${Math.min(i, 20) * 45}ms" title="Chance to advance ${Math.round(g.adv * 100)}%"><span class="n">${esc(g.tag)}</span><span class="gm"><span>${esc(g.name)}</span><span class="gsub">${sub.join('')}</span></span><span class="res ${g.res.toLowerCase()}">${g.res}</span><span class="ch">${score}</span></li>`;
+}
+function gamesBlock(games) {
+  const list = `<ul class="weeks">${games.map(gameRow).join('')}</ul>`;
+  if (games.length <= 24) return list;
+  return `<div class="strip" role="img" aria-label="Results, one block per game">${games.map(g => `<i class="${g.res.toLowerCase()}" title="${esc(g.name)} ${g.pf}–${g.pa}"></i>`).join('')}</div><details class="more"><summary>All ${games.length} results</summary>${list}</details>`;
+}
+function tableHtml(res) {
+  const t = res.table, keep = t.length <= 6 ? t.length : 5;
+  const show = t.filter(r => r.rank <= keep || r.me);
+  let out = '', prev = 0;
+  for (const r of show) {
+    if (r.rank - prev > 1) out += '<tr class="gap"><td colspan="7">…</td></tr>';
+    prev = r.rank;
+    out += `<tr class="${r.me ? 'me' : ''}"><td>${r.rank}</td><td>${esc(r.name)}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf - r.ga >= 0 ? '+' : '−'}${Math.abs(r.gf - r.ga)}</td><td>${r.pts}</td></tr>`;
+  }
+  return `<table class="tbl"><thead><tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${out}</tbody></table>`;
+}
+function previewRow(rd, kind) {
+  const adj = matchupAdj(state.lineup, rd.types), cls = adj > 0.4 ? 'up' : adj < -0.4 ? 'dn' : '';
+  const sub = [];
+  if (rd.types.length) sub.push(rd.types.map(tdot).join(''), `<i class="edge ${cls}">${sgn(adj)} edge</i>`);
+  if (rd.style) sub.push(`<span>${SP().styleNames[rd.style]}</span>`);
+  if (rd.bestOf) sub.push(`<span>Best of ${rd.bestOf}</span>`);
+  return `<li class="wk ${kind === 'later' ? 'dim' : ''}"><span class="n">${esc(rd.tag)}</span><span class="gm"><span>${esc(rd.name)}</span><span class="gsub">${sub.join('')}</span></span><span class="res nx">${kind === 'next' ? 'NEXT' : ''}</span><span class="ch"></span></li>`;
+}
+const ratingTiles = run => {
+  const sp = SP();
+  return `<div class="ratings">${Object.keys(run.t.sides).map(k => `<div class="rt"><small>${sp.sideNames[k]}</small><b>${Math.round(run.t.sides[k])}</b></div>`).join('')}${MODE().chemCap ? `<div class="rt"><small>Chemistry</small><b>+${run.t.chem.toFixed(1)}</b></div>` : ''}</div>`;
+};
+
+/* Plan buttons for a stage. `fn(key)` gives the note under each plan. */
+function planButtons(action, notes) {
+  const sp = SP(), keys = ['bal', 'press', 'poss', 'counter'];
+  const best = keys.reduce((b, k) => (notes[k].score > notes[b].score ? k : b), 'bal');
+  return `<div class="plans" role="group" aria-label="Choose a game plan">${keys.map(k => `<button class="plan ${k === best && notes[k].score > 0 ? 'best' : ''}" data-action="${action}" data-plan="${k}"><b>${sp.plans[k].label}</b><small>${sp.plans[k].blurb}</small><em class="${notes[k].score > 0 ? 'up' : notes[k].score < 0 ? 'dn' : ''}">${notes[k].text}</em></button>`).join('')}</div>`;
+}
+function seasonPlanNotes(def) {
+  const out = {};
+  for (const k of ['bal', 'press', 'poss', 'counter']) {
+    const t = planTally(def, k);
+    out[k] = { score: t.fav - t.exp, text: k === 'bal' ? 'No edge either way' : `Favoured in ${t.fav} · exposed in ${t.exp}` };
+  }
+  return out;
+}
+function roundPlanNotes(rd) {
+  const out = {};
+  for (const k of ['bal', 'press', 'poss', 'counter']) {
+    const a = planAdj(k, rd.style);
+    out[k] = { score: a, text: k === 'bal' ? 'No edge either way' : a > 0 ? 'Favoured vs ' + SP().styleNames[rd.style].toLowerCase() : a < 0 ? 'Exposed vs ' + SP().styleNames[rd.style].toLowerCase() : 'Even' };
+  }
+  return out;
+}
+
+function phaseSummary(res) {
+  const sp = SP();
+  if (res.kind === 'ko') {
+    const won = res.games.filter(g => g.win).length;
+    return `<p class="eyebrow">${esc(res.def.title)} complete</p>
+      <div class="record ${res.won ? 'perfect' : ''} small">${res.won ? 'Winners' : 'Out in the ' + esc(koExitName(res))}</div>
+      <p class="hint">${won} of ${res.def.rounds.length} rounds won.</p>
+      <ul class="weeks">${res.games.map(gameRow).join('')}</ul>`;
+  }
+  return `<p class="eyebrow">${esc(res.def.title)} complete · ${MODE().label}</p>
+    <div class="record">${recordText(res)}</div>
+    <p class="verdict">${esc(res.def.sumText(res))}</p>
+    <p class="hint">${res.pf} ${sp.scoreWord} for, ${res.pa} against${res.def.table ? ` · ${res.pts} points` : ''}.</p>
+    ${res.table ? tableHtml(res) : ''}`;
+}
+
+function renderBreak(run) {
+  const sp = SP(), cur = run.cur, last = run.done[run.done.length - 1];
+  const again = `<div class="btnrow">${run.done.length ? '<button class="btn alt" data-action="resim">Replay</button>' : ''}<button class="btn alt" data-action="reset">Draft again</button></div>`;
+  let h = `<div class="panel" id="resultCard">`;
+  if (last) h += phaseSummary(last);
+  else h += `<p class="eyebrow">Squad locked in · ${MODE().label}</p><h2>${esc(cur.comp.name)}</h2>`;
+  if (run.done.length <= 1 && !(last && last.kind === 'ko')) h += awardsHtml(run.aw);
+  h += `<h3 class="sub">Up next: ${FMT().comps.length > 1 && cur.def.title !== cur.comp.name ? esc(cur.comp.name) + ' · ' : ''}${esc(cur.def.title)}</h3>`;
+  if (cur.def.kind === 'ko') {
+    h += `<ul class="weeks">${cur.def.rounds.map((rd, i) => previewRow(rd, i === 0 ? 'next' : 'later')).join('')}</ul>`;
+    const prefix = run.done.filter(d => d.comp === cur.comp.id);
+    h += `<p class="hint">Chance to win the ${esc(cur.comp.name.toLowerCase())} from here: <b>${fmtPct(compOdds(cur.comp, state.lineup, run.t, prefix))}</b></p>`;
+    h += `<div class="btnrow"><button class="btn" data-action="startKo">${esc(cur.def.startLabel)}</button></div>`;
+  } else {
+    h += `<p class="hint">${cur.def.games.length} ${sp.gameWord}s${cur.def.table ? ' against a full table of rivals' : ''}.</p>`;
+    if (sp.plans) {
+      h += `<p class="hint">Choose a game plan for this stage. It applies to every ${sp.gameWord} in it.</p>${planButtons('playSeason', seasonPlanNotes(cur.def))}`;
+    } else h += `<div class="btnrow"><button class="btn" data-action="playSeason" data-plan="">${esc(cur.def.startLabel)}</button></div>`;
+  }
+  if (last && last.kind === 'season') h += `<h3 class="sub">${esc(last.def.title)} results</h3>${gamesBlock(last.games)}`;
+  return h + again + '</div>';
+}
+
+function renderKo(run) {
+  const sp = SP(), ko = run.ko, def = ko.def, played = ko.games, remaining = def.rounds.slice(played.length), next = remaining[0];
+  const prefix = run.done.filter(d => d.comp === run.cur.comp.id);
+  const odds = koChainOdds(state.lineup, run.t, remaining, 'bal');
+  let h = `<div class="panel" id="resultCard"><p class="eyebrow">${esc(def.title)}${FMT().comps.length > 1 ? ' · ' + esc(run.cur.comp.name) : ''}</p>
+    <h2>Round ${played.length + 1} of ${def.rounds.length}</h2>
+    <ul class="weeks">${played.map(gameRow).join('')}${remaining.map((rd, i) => previewRow(rd, i === 0 ? 'next' : 'later')).join('')}</ul>
+    <p class="hint">Chance to win it all from here: <b>${fmtPct(odds)}</b></p>`;
+  if (sp.plans) {
+    h += `<p class="hint">Pick a game plan for the ${esc(roundName(next.name))}.</p>${planButtons('playRound', roundPlanNotes(next))}<div class="btnrow"><button class="btn alt" data-action="simRest">Sim the rest with smart plans</button></div>`;
+  } else {
+    h += `<div class="btnrow"><button class="btn" data-action="playRound" data-plan="">${next.bestOf ? 'Play the ' + esc(roundName(next.name)) : 'Play the ' + esc(roundName(next.name))}</button><button class="btn alt" data-action="simRest">Sim the rest</button></div>`;
+  }
+  return h + '</div>';
+}
+
+function oddsSentence(o) { return /^\d+–0$/.test(o.label) ? `Chance of going ${o.label}` : `Chance of ${o.label}`; }
+function shareText(run) {
+  const sp = SP(), f = FMT(), lines = [];
+  lines.push(`Dex League · ${sp.name} · ${f.label}${state.formation ? ' · ' + sp.formations[state.formation].label : ''} · ${MODE().label}${state.gods ? ' · God squad' : ''}`);
+  lines.push(run.story.headline);
+  for (const d of run.done) {
+    if (d.kind === 'season') lines.push(`${d.def.title}: ${recordText(d)}${d.table ? `, ${ordinal(d.rank)}, ${d.pts} pts` : ''}`);
+    else lines.push(`${d.def.title}: ${d.won ? 'won it' : 'out in the ' + koExitName(d)}`);
+  }
+  lines.push(`MVP: ${run.aw.mvp.mon.name} (${run.aw.mvp.f.arch}, ${run.aw.mvp.slot.pos})`);
+  if (run.odds && run.odds[0]) lines.push(`${oddsSentence(run.odds[0])} with this squad: ${fmtPct(run.odds[0].p)}`);
+  if (state.room) lines.push(`Draft room: ${state.room}`);
+  lines.push(`Squad code: ${encodeSquad(state.myName || 'Squad', ctxOf(), state.lineup)}`);
+  return lines.join('\n');
+}
+
+function renderFinal(run) {
+  const sp = SP(), cr = compResults(run), multi = cr.length > 1, first = run.done[0];
+  let big, bigLabel, perfect = false;
+  if (multi) { big = trophyCount(run) + '/' + cr.length; bigLabel = 'Trophies won'; perfect = trophyCount(run) === cr.length; }
+  else if (first.kind === 'season' && !(first.def.table && first.def.table.advance)) {
+    big = recordText(first); bigLabel = 'Final record'; perfect = first.l === 0 && (!first.def.table ? true : first.d + first.w === first.games.length);
+  } else {
+    const ko = run.done.filter(d => d.kind === 'ko');
+    const wonR = ko.reduce((a, d) => a + d.games.filter(g => g.win).length, 0);
+    const totR = cr[0].comp.phases.filter(p => p.kind === 'ko').reduce((a, p) => a + resolveDef(p).rounds.length, 0);
+    big = wonR + '/' + totR; bigLabel = first.kind === 'season' ? 'Knockout rounds won' : 'Rounds won'; perfect = wonR === totR;
+  }
+  let sub = '';
+  if (!multi && first.kind === 'season' && sp.verdict(first.w, first.games.length)) sub = `${sp.verdict(first.w, first.games.length)} · ${first.pf} ${sp.scoreWord} for, ${first.pa} against`;
+  else if (!multi && first.table && first.def.table.title) sub = `${first.pts} points · goal difference ${first.pf - first.pa >= 0 ? '+' : '−'}${Math.abs(first.pf - first.pa)}`;
+  const comps = cr.map(({ comp, done }) => {
+    if (!done.length) return `<div class="comp"><h3 class="sub">${esc(comp.name)}</h3><p class="hint">Did not qualify.</p></div>`;
+    const won = compWon(comp, done);
+    const body = done.map(d => d.kind === 'ko'
+      ? `<p class="eyebrow">${esc(d.def.title)}</p><ul class="weeks">${d.games.map(gameRow).join('')}</ul>`
+      : `<p class="eyebrow">${esc(d.def.title)} · ${recordText(d)}${d.table ? ' · ' + ordinal(d.rank) : ''}</p>${d.table ? tableHtml(d) : ''}${gamesBlock(d.games)}`).join('');
+    return `<div class="comp">${multi || done.length > 1 ? `<h3 class="sub">${esc(comp.name)}${won ? '<span class="trophy">Trophy</span>' : ''}</h3>` : ''}${body}</div>`;
+  }).join('');
+  return `<div class="panel" id="resultCard">
+    <p class="eyebrow">${bigLabel} · ${sp.name} · ${esc(FMT().label)}</p>
+    <div class="record ${perfect ? 'perfect' : ''}">${big}</div>
+    <p class="verdict">${esc(run.story.headline)}</p>
+    ${sub ? `<p class="hint">${esc(sub)}</p>` : ''}
+    ${awardsHtml(run.aw)}
+    <div class="recap"><h3 class="sub">Season recap</h3><p>${run.story.lines.map(esc).join(' ')}</p></div>
+    ${ratingTiles(run)}
+    <div id="oddsBox"><p class="hint">Working out the odds…</p></div>
+    ${comps}
+    <textarea id="share" readonly aria-label="Share text"></textarea>
+    <div class="btnrow"><button class="btn alt" data-action="copy" id="copyBtn">Copy result</button><button class="btn alt" data-action="resim">Replay</button><button class="btn" data-action="reset">Draft again</button></div>
+    ${shareBlock()}
+  </div>`;
+}
+function showOdds(run) {
+  const box = $('#oddsBox'), ta = $('#share');
+  if (box) box.innerHTML = run.odds.map(o => `<p class="hint">${esc(oddsSentence(o))} with this squad: <b>${fmtPct(o.p)}</b></p>`).join('') + (SP().plans ? '<p class="hint">Odds assume a balanced game plan.</p>' : '');
+  if (ta) ta.value = shareText(run);
+}
+function fillOdds(run) {
+  setTimeout(() => {
+    if (state.run !== run) return;
+    run.odds = targetOdds(state.lineup, run.t);
+    showOdds(run);
+  }, 30);
+}
+
+function renderResult() {
+  const el = $('#resultPanel'), run = state.run;
+  if (!run) { el.innerHTML = ''; return; }
+  if (run.stage === 'break') el.innerHTML = renderBreak(run);
+  else if (run.stage === 'ko') el.innerHTML = renderKo(run);
+  else {
+    run.story = run.story || recap(state.lineup, run);
+    el.innerHTML = renderFinal(run);
+    if (run.odds) showOdds(run); else { const ta = $('#share'); if (ta) ta.value = shareText(run); fillOdds(run); }
+  }
+}
+
+
+/* ---------- Share a squad, and play friends from pasted codes ---------- */
+const canLink = () => /^https?:/.test(location.protocol);
+function myCode() { return encodeSquad(state.myName || 'Squad', ctxOf(), state.lineup); }
+function shareBlock() {
+  if (filledCount() !== total() || !total()) return '';
+  return `<div class="share"><h3 class="sub">Share your squad</h3>
+    <p class="hint">Post this code in your chat. Friends paste it under <b>Play friends</b> to take on your squad.</p>
+    <label class="fld">Team name<input id="sqName" maxlength="14" autocomplete="off" value="${esc(state.myName)}" placeholder="Squad"></label>
+    <textarea id="sqCode" readonly aria-label="Squad code">${esc(myCode())}</textarea>
+    <div class="btnrow"><button class="btn alt" data-action="copyCode" id="copyCodeBtn">Copy code</button>${canLink() ? '<button class="btn alt" data-action="copyLink" id="copyLinkBtn">Copy link</button>' : ''}</div></div>`;
+}
+function copyText(text, btn, label, ta) {
+  const done = () => { if (btn) { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = label; }, 1500); } };
+  const fallback = () => { if (ta) { ta.focus(); ta.select(); } if (btn) btn.textContent = 'Press copy on the selected text'; };
+  try { navigator.clipboard.writeText(text).then(done).catch(fallback); } catch (err) { fallback(); }
+}
+function lineupList(sq) {
+  return withCtx(sq.ctx, () => `<ul class="lu">${activeSlots().map(s => `<li><span class="pos">${s.pos}</span><span>${esc(sq.lineup[s.id].name)}</span><em>${Math.round(fit(sq.lineup[s.id], s).score)}</em></li>`).join('')}</ul>`);
+}
+function squadMeta(sq) {
+  const sp = SPORTS[sq.ctx.sportKey], f = sp.formats[sq.ctx.fmtKey], ms = f.modes || sp.modes;
+  const bits = [sp.name];
+  if (Object.keys(sp.formats).length > 1) bits.push(f.label);
+  if (sp.formations) bits.push(sp.formations[sq.ctx.formation].label);
+  else if (Object.keys(ms).length > 1) bits.push(ms[sq.ctx.mode].label);
+  return bits.join(' · ') + ' · rating ' + Math.round(sq.t.overall);
+}
+function vsTable(res, sp) {
+  const soccer = res.pts;
+  const head = soccer ? '<th>#</th><th>Squad</th><th>W</th><th>D</th><th>L</th><th>Pts</th>' : '<th>#</th><th>Squad</th><th>W</th><th>L</th><th>Diff</th>';
+  const body = res.tab.map(r => soccer
+    ? `<tr><td>${r.rank}</td><td>${esc(r.name)}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.pts}</td></tr>`
+    : `<tr><td>${r.rank}</td><td>${esc(r.name)}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf - r.pa >= 0 ? '+' : '−'}${Math.abs(r.pf - r.pa)}</td></tr>`).join('');
+  return `<table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function vsFinal(f, title) {
+  const A = f.games.length ? f.winner : null;
+  return `<h3 class="sub">${title}${f.bo > 1 ? ' · best of ' + f.bo : ''}</h3>
+    <div class="record small perfect">${esc(f.winner.name)}</div>
+    <p class="hint">won ${Math.max(f.wa, f.wb)}–${Math.min(f.wa, f.wb)} over ${esc(f.loser.name)}.</p>`;
+}
+function renderVersus() {
+  const el = $('#versus'), vs = state.vs;
+  if (state.view !== 'versus') { el.innerHTML = ''; return; }
+  const mineReady = filledCount() === total() && total() > 0;
+  const n = vs.squads.length;
+  let h = `<div class="panel"><h2>Play friends</h2>
+    <p class="hint">No accounts and no server. Each friend drafts, then copies their <b>squad code</b> and posts it in your chat. Paste everyone's codes here: three or more squads play a league and a final, two play a series.</p>
+    <textarea id="codes" placeholder="Paste squad codes here, one per line" aria-label="Squad codes"></textarea>
+    <div class="btnrow"><button class="btn" data-action="addCodes">Add squads</button>${mineReady ? '<button class="btn alt" data-action="addMine">Add my squad</button>' : ''}</div>
+    ${vs.msg ? `<p class="hint" role="status">${esc(vs.msg)}</p>` : ''}</div>`;
+  if (n) {
+    h += `<div class="panel"><h2>Squads <span class="cnt">${n}</span></h2><ul class="sqs">${vs.squads.map((sq, i) => `<li class="sq"><div class="sqhead"><div><b>${esc(sq.name)}</b><small>${esc(squadMeta(sq))}</small></div><button class="ghost" data-action="removeSquad" data-i="${i}">Remove</button></div><details class="more"><summary>See the lineup</summary>${lineupList(sq)}</details></li>`).join('')}</ul>
+      ${n >= 2 ? `<button class="btn" data-action="playVersus">${n >= 3 ? 'Play the league' : 'Play the series'}</button>` : '<p class="hint">Add at least two squads to play.</p>'}</div>`;
+  }
+  if (vs.res) {
+    const r = vs.res, sp = SPORTS[vs.squads[0].ctx.sportKey];
+    const body = r.duel ? vsFinal(r.final, 'Series') : `<h3 class="sub">League table</h3>${vsTable(r, sp)}${r.final ? vsFinal(r.final, 'Final') : ''}
+      <details class="more"><summary>All ${r.fixtures.length} matches</summary><ul class="weeks">${r.fixtures.map(f => `<li class="wk plain"><span class="n">${f.res}</span><span class="gm"><span>${esc(f.home)} vs ${esc(f.away)}</span></span><span class="ch">${f.pf}–${f.pa}</span></li>`).join('')}</ul></details>`;
+    h += `<div class="panel" id="vsResult"><p class="eyebrow">Result</p>${body}
+      <textarea id="vsShare" readonly aria-label="Share results">${esc(versusText(r, vs.squads))}</textarea>
+      <div class="btnrow"><button class="btn alt" data-action="copyVs" id="copyVsBtn">Copy results</button><button class="btn alt" data-action="playVersus">Play again</button></div></div>`;
+  }
+  el.innerHTML = h;
+}
+function addCodes(raw) {
+  const vs = state.vs, tokens = String(raw).split(/\s+/).map(t => t.trim()).filter(Boolean);
+  let added = 0; const problems = [];
+  for (const t of tokens) {
+    const d = decodeSquad(t);
+    if (d.error) { problems.push(d.error); continue; }
+    if (vs.squads.length && vs.squads[0].key !== d.key) { problems.push(`${d.name} is a ${SPORTS[d.ctx.sportKey].name} squad, but this group is ${SPORTS[vs.squads[0].ctx.sportKey].name}.`); continue; }
+    if (vs.squads.some(q => q.code === d.code)) { problems.push(`${d.name} is already added.`); continue; }
+    if (vs.squads.length >= 16) { problems.push('That is the most squads one league can hold (16).'); break; }
+    let nm = d.name, k = 2; while (vs.squads.some(q => q.name === nm)) nm = d.name + ' ' + k++;
+    d.name = nm; vs.squads.push(d); added++;
+  }
+  vs.res = null;
+  vs.msg = (added ? `Added ${added} squad${added === 1 ? '' : 's'}. ` : '') + problems.join(' ');
+  if (!tokens.length) vs.msg = 'Paste at least one squad code first.';
+}
+
+function render() {
+  const sp = SP();
+  $('#eyebrow').textContent = state.view === 'versus' ? 'Play friends' : 'Fan-made draft game' + (filledCount() || state.run ? ' · ' + sp.name + ' · ' + FMT().label : '') + (state.room && (filledCount() || state.run) ? ' · Room ' + state.room : '');
+  $('#lede').textContent = `Roll a type and draft Pokémon from Kanto to Sinnoh into ${sp.name.toLowerCase()}'s starting spots. ${FMT().blurb} Base stats decide who fits where.`;
+  $('#count').textContent = `${filledCount()}/${total()}`;
+  $('#pfill').style.width = `${filledCount() / total() * 100}%`;
+  document.body.classList.toggle('vsview', state.view === 'versus');
+  $('#vsBtn').textContent = state.view === 'versus' ? 'Back to drafting' : 'Play friends';
+  renderSchedule(); renderRoll(); renderResult(); renderLineup(); renderVersus();
+}
+function scrollToEl(sel) {
+  const el = $(sel);
+  if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+function startRun() {
+  const run = newRun(state.lineup);
+  state.run = run;
+  const c = run.cur;
+  if (c.def.kind === 'ko') startKo(run);
+  else if (!SP().plans) playSeasonStep(run, state.lineup, null);
+  render();
+  scrollToEl('#resultCard');
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  const a = b.dataset.action, run = state.run;
+  if (a === 'sport') { if (!filledCount()) { applyCtx({ sportKey: b.dataset.sport, fmtKey: null, mode: null, formation: null }); render(); } return; }
+  if (a === 'format') { if (!filledCount()) { applyCtx({ fmtKey: b.dataset.fmt, mode: null }); render(); } return; }
+  if (a === 'formation') { if (!filledCount()) { applyCtx({ formation: b.dataset.form }); render(); } return; }
+  if (a === 'pool') { if (!filledCount()) { state.gods = b.dataset.pool === 'gods'; render(); } return; }
+  if (a === 'mode') { if (!filledCount()) { applyCtx({ mode: b.dataset.mode }); render(); } return; }
+  if (a === 'versusToggle') { state.view = state.view === 'versus' ? 'draft' : 'versus'; render(); window.scrollTo(0, 0); return; }
+  if (a === 'addCodes') { addCodes($('#codes').value); render(); return; }
+  if (a === 'addMine') { addCodes(myCode()); render(); return; }
+  if (a === 'removeSquad') { state.vs.squads.splice(Number(b.dataset.i), 1); state.vs.res = null; state.vs.msg = ''; render(); return; }
+  if (a === 'playVersus') {
+    const q = state.vs.squads;
+    state.vs.res = q.length >= 3 ? versusLeague(q) : versusDuel(q[0], q[1]);
+    render(); scrollToEl('#vsResult'); return;
+  }
+  if (a === 'copyVs') { copyText($('#vsShare').value, b, 'Copy results', $('#vsShare')); return; }
+  if (a === 'copyCode') { copyText(myCode(), b, 'Copy code', $('#sqCode')); return; }
+  if (a === 'copyLink') { copyText(location.href.split('#')[0] + '#squad=' + encodeURIComponent(myCode()), b, 'Copy link'); return; }
+  if (a === 'newRoom') { state.room = newRoomCode(); render(); return; }
+  if (a === 'copyInvite') {
+    const ri = $('#roomInput'); if (ri) state.room = cleanRoom(ri.value);
+    copyText(`Join my Dex League draft room: ${state.room}` + (canLink() ? '\n' + location.href.split('#')[0] + '#room=' + state.room : ''), b, 'Copy invite'); return;
+  }
+  if (a === 'playSeason') { playSeasonStep(run, state.lineup, b.dataset.plan || null); render(); scrollToEl('#resultCard'); return; }
+  if (a === 'startKo') { startKo(run); render(); scrollToEl('#resultCard'); return; }
+  if (a === 'playRound') { playKoStep(run, state.lineup, b.dataset.plan || null); render(); scrollToEl('#resultCard'); return; }
+  if (a === 'simRest') { while (run.ko) playKoStep(run, state.lineup, SP().plans ? 'auto' : null); render(); scrollToEl('#resultCard'); return; }
+  if (a === 'roll') {
+    const ri = $('#roomInput'); if (ri) state.room = cleanRoom(ri.value);
+    const taken = takenSet();
+    setRollSeed(state.room, filledCount());
+    const type = rollType(taken);
+    state.roll = { type, cands: candidatesFor(type, taken), legend: false }; setRollSeed(null, 0); state.sel = null; render();
+  } else if (a === 'legend') {
+    if (!state.gods && !state.legendLeft) return;
+    const ri = $('#roomInput'); if (ri) state.room = cleanRoom(ri.value);
+    if (!state.gods) state.legendLeft--; setRollSeed(state.room, 'L' + filledCount()); state.roll = { cands: legendCandidates(takenSet()), legend: true }; setRollSeed(null, 0); state.sel = null; render();
+  } else if (a === 'pick') {
+    state.sel = Number(b.dataset.i); render(); scrollToEl('#picker');
+  } else if (a === 'place') {
+    const m = state.roll.cands[state.sel];
+    state.lineup[b.dataset.slot] = m; state.roll = null; state.sel = null; render();
+    scrollToEl('#rollPanel');
+  } else if (a === 'sim' || a === 'resim') {
+    startRun();
+  } else if (a === 'reset') {
+    state.lineup = {}; state.roll = null; state.sel = null; state.legendLeft = 1; state.run = null; render(); window.scrollTo(0, 0);
+  } else if (a === 'copy') {
+    const ta = $('#share'), btn = $('#copyBtn');
+    const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy result'; }, 1500); };
+    const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Press copy on the selected text'; };
+    try { navigator.clipboard.writeText(ta.value).then(done).catch(fallback); } catch (err) { fallback(); }
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'sqName') {
+    state.myName = e.target.value;
+    const ta = $('#sqCode'); if (ta) ta.value = myCode();
+    const sh = $('#share'); if (sh && state.run && state.run.stage === 'final') sh.value = shareText(state.run);
+  }
+});
+applyCtx({});
+(function readHash() {
+  try {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (h.get('room')) state.room = cleanRoom(h.get('room'));
+    if (h.get('squad')) { addCodes(h.get('squad')); state.view = 'versus'; }
+  } catch (err) { /* ignore a bad link */ }
+})();
+render();
+</script>
+</body>
+</html>
